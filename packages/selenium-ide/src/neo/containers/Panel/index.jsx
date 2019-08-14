@@ -27,7 +27,7 @@ import { modifier } from 'modifier-keys'
 import Tooltip from '../../components/Tooltip'
 import storage from '../../IO/storage'
 import ProjectStore from '../../stores/domain/ProjectStore'
-import seed from '../../stores/seed'
+import seed from '../../stores/seed_custom'
 import SuiteDropzone from '../../components/SuiteDropzone'
 import PauseBanner from '../../components/PauseBanner'
 import ProjectHeader from '../../components/ProjectHeader'
@@ -38,7 +38,7 @@ import Modal from '../Modal'
 import UiState from '../../stores/view/UiState'
 import PlaybackState from '../../stores/view/PlaybackState'
 import ModalState from '../../stores/view/ModalState'
-import '../../side-effects/contextMenu'
+import '../../side-effects/contextMenu_custom'
 import '../../styles/app.css'
 import '../../styles/font.css'
 import '../../styles/layout.css'
@@ -46,7 +46,7 @@ import '../../styles/resizer.css'
 import { isProduction, isTest, userAgent } from '../../../common/utils'
 import Logger from '../../stores/view/Logs'
 
-import { loadProject, saveProject, loadJSProject } from '../../IO/filesystem'
+import { loadProject, saveProject, loadJSProject, exportProjectToWebapp } from '../../IO/filesystem'
 
 if (!isTest) {
   const api = require('../../../api')
@@ -64,7 +64,8 @@ const project = observable(new ProjectStore(''))
 UiState.setProject(project)
 
 if (isProduction) {
-  createDefaultSuite(project, { suite: '', test: '' })
+  //createDefaultSuite(project, { suite: '', test: '' })
+  seed(project)
 } else {
   seed(project)
 }
@@ -108,6 +109,12 @@ if (browser.windows) {
 export default class Panel extends React.Component {
   constructor(props) {
     super(props)
+    this.exportFn = function(exportedProject) {
+      //Change below to send proper request
+      browser.runtime.sendMessage({type: 'data', obj: exportedProject})
+      UiState.stopRecording({ nameNewTest: false })
+      UiState.displayedTest.clearAllCommands()
+    }
     this.state = { project }
     this.parseKeyDown = this.parseKeyDown.bind(this)
     this.keyDownHandler = window.document.body.onkeydown = this.handleKeyDown.bind(
@@ -167,6 +174,9 @@ export default class Panel extends React.Component {
     } else if (keyComb.onlyPrimary && keyComb.key === 'S') {
       e.preventDefault()
       saveProject(this.state.project)
+    } else if (keyComb.primaryAndShift && keyComb.key === 'C') {
+      e.preventDefault()
+      exportProjectToWebapp(this.state.project, this.exportFn)
     } else if (keyComb.onlyPrimary && keyComb.key === 'O' && this.openFile) {
       e.preventDefault()
       this.openFile()
@@ -304,6 +314,7 @@ export default class Panel extends React.Component {
                 }}
                 load={loadProject.bind(undefined, this.state.project)}
                 save={() => saveProject(this.state.project)}
+                exportTo={() => exportProjectToWebapp(this.state.project,this.exportFn)}
                 new={this.loadNewProject.bind(this)}
               />
               <div

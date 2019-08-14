@@ -24,6 +24,7 @@ import { observer } from 'mobx-react'
 import NewButton from '../ActionButtons/New'
 import OpenButton from '../ActionButtons/Open'
 import SaveButton from '../ActionButtons/Save'
+import ExportButton from '../ActionButtons/Export'
 import MoreButton from '../ActionButtons/More'
 import ListMenu, { ListMenuItem } from '../ListMenu'
 import './style.css'
@@ -42,6 +43,7 @@ export default class ProjectHeader extends React.Component {
     openFile: PropTypes.func,
     load: PropTypes.func,
     save: PropTypes.func,
+    exportTo: PropTypes.func,
     new: PropTypes.func,
   }
   handleKeyDown(e) {
@@ -81,6 +83,11 @@ export default class ProjectHeader extends React.Component {
             data-place="left"
             unsaved={this.props.changed}
             onClick={this.props.save}
+          />
+          <ExportButton
+            data-place="left"
+            unsaved={this.props.changed}
+            onClick={this.props.exportTo}
           />
           <ListMenu
             width={250}

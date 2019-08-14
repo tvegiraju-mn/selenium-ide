@@ -1,0 +1,26 @@
+.properties {
+  display: flex !important;
+}
+.properties .labelled-input {
+  margin: 5px;
+}
+
+.properties select {
+  font-size: 12px;
+  line-height: 17px;
+  padding: 5px;
+  border: 1px #dcdcdc solid;
+}
+
+.table-config-dialog .dialog__contents {
+  padding: 5px 20px 20px 20px;
+}
+
+.table-config-dialog .dialog__footer {
+  padding: 10px 0 0 0;
+}
+
+.table-config-dialog .message {
+  padding: 5px 0 0 0;
+  color: #ff5f7b;
+}

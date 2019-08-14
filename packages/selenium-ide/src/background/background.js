@@ -91,8 +91,8 @@ function openPanel(tab) {
 
 function openWindowFromStorageResolution() {
   let opts = {
-    height: 690,
-    width: 550,
+    height: 720,
+    width: 1350,
   }
   return browser.storage.local
     .get()
@@ -205,3 +205,106 @@ browser.runtime.onInstalled.addListener(() => {
     })
   }
 })
+
+let url = undefined
+let appType = undefined
+let tabPort = undefined, tabId = undefined, windowId = undefined
+
+var focusSourceTab = function() {
+  browser.tabs.update(tabId, {
+    active: true,
+  });
+  browser.windows.update(windowId, {
+    focused: true,
+  });
+};
+
+var onMessageListener = function(message, sender, sendResponse) {
+  switch(message.type) {
+    case "bglog":
+      console.log(message.obj);
+      if (tabPort)
+        tabPort.postMessage({type: 'log', obj: message.obj});
+      break;
+    case "data":
+      if (tabPort) {
+        tabPort.postMessage({type: 'data', obj: message.obj});
+        focusSourceTab();
+      }
+      break;
+    case "showModal":
+      if (tabPort) {
+        tabPort.postMessage({type: 'showModal', obj: message.obj});
+        focusSourceTab();
+        var modalHandler = function(request) {
+          if (request.type == 'requestedData' ) {
+            console.log('ModalData From WebApp: ' + JSON.stringify(request.payload));
+            sendResponse({data: request.payload});
+            tabPort.onMessage.removeListener(modalHandler);
+          }
+        }
+        tabPort.onMessage.addListener(modalHandler);
+      }
+      break;
+    case "geturl":
+      sendResponse({url: url})
+      break;
+    case "getAppType":
+      sendResponse({appType: appType})
+      break;
+  }
+  return true;
+};
+
+browser.runtime.onMessage.addListener(onMessageListener);
+
+/*//Below code is for one time messages with external tabs/apps
+browser.runtime.onMessageExternal.addListener(function(request, sender, sendResponse) {
+    console.log('got request: ' + JSON.stringify(request) + ' from tab id: ' + sender.tab.id)
+    tabId = sender.tab.id
+    if (request.type && request.type == 'OPENIDE') {
+        openPanel({ windowId: 0 })
+        if (request.payload && request.payload.url) {
+          url = request.payload && request.payload.url
+        }
+        if (request.payload && request.payload.appType) {
+          appType = request.payload && request.payload.appType
+        }
+    }
+  console.log('end of request')
+  sendResponse({success: true})
+  return true;
+});*/
+
+browser.runtime.onConnectExternal.addListener(function(port) {
+  tabPort = port;
+  port.onMessage.addListener(function(request) {
+    console.log('got request using onConnectExternal: ' + JSON.stringify(request))
+    if (request.type) {
+      if (request.type == 'OPENIDE') {
+        browser.tabs.query({active: true, currentWindow: true}).then(function(tabs) {
+          var currTab = tabs[0];
+          if (currTab) {
+            tabId = currTab.id
+            windowId = currTab.windowId
+          }
+        });
+        openPanel({windowId: 0})
+        if (request.payload && request.payload.url) {
+          url = request.payload && request.payload.url
+        }
+        if (request.payload && request.payload.appType) {
+          appType = request.payload && request.payload.appType
+        }
+        port.postMessage({type: 'log', obj: 'Ide Started with AppType: ' + appType + ' & URL: ' + url})
+      } else if (request.type == 'CLOSEIDE') {
+        browser.windows.remove(ideWindowId)
+        port.disconnect();
+        tabPort = undefined;
+        tabId = undefined;
+        windowId = undefined;
+      }
+    }
+    console.log('end of request')
+  })
+});

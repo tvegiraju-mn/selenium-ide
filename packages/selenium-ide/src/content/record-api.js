@@ -17,6 +17,7 @@
 
 import browser from 'webextension-polyfill'
 import { calculateFrameIndex } from './utils'
+import LocatorBuilders from './locatorBuilders_custom'
 
 let contentSideexTabId = -1
 let frameLocation = ''
@@ -328,6 +329,9 @@ export function record(
       command: command,
       target: target,
       value: value,
+      comment: LocatorBuilders.displayName,
+      recordedType: LocatorBuilders.recordedType,
+      additionalData: LocatorBuilders.additionalData,
       insertBeforeLastCommand: insertBeforeLastCommand,
       frameLocation:
         actualFrameLocation != undefined ? actualFrameLocation : frameLocation,

@@ -184,6 +184,40 @@ export default class CommandForm extends React.Component {
                 find(this.props.command.target)
               }}
             />
+            {/*<FlatButton
+              data-tip={
+                this.props.command && this.props.command.hasTableInput
+                  ? '<p>Modify Table configuration</p>'
+                  : '<p>Add Table configuration</p>'
+              }
+              className={classNames(
+                'table-config-button',
+                    'icon',
+                    'si-open-tab',
+                {
+                  active: this.props.command && this.props.command.hasTableInput,
+                }
+              )}
+              disabled={
+                !this.props.command ||
+                (this.props.command && !this.props.command.command) ||
+                PlaybackState.isPlaying
+              }
+              onClick={() => {
+                ModalState.toggleTableInputConfig()
+                this.props.command
+                    ? this.props.command.toggleOpensTableInput()
+                    : undefined
+              }}
+            >
+              {this.props.command &&
+              (this.props.command.hasTableInput &&
+              !this.props.command.opensTableInput) ? (
+              <InfoBadge />
+              ) : (
+                  undefined
+              )}
+            </FlatButton>*/}
           </div>
           <TextArea
             id="value"

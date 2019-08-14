@@ -17,10 +17,21 @@
 
 import browser from 'webextension-polyfill'
 import UiState from '../../stores/view/UiState'
+import ModalState from '../../stores/view/ModalState'
+import { focusRecordingWindow } from '../../IO/SideeX/find-select'
 import record, { recordOpensWindow } from './record'
 import { Logger, Channels } from '../../stores/view/Logs'
 
 const logger = new Logger(Channels.PLAYBACK)
+const actionCommentMap = {
+  'click' : 'Click on',
+  'type' : 'Entering',
+  'select' : 'Selecting',
+  'readDataFromUI' : 'Reading',
+  'checkbox': 'Check/Uncheck',
+  'performWait' : 'Wait on',
+  'jsclick' : 'Click on'
+}
 
 function getSelectedCase() {
   return {
@@ -413,6 +424,12 @@ export default class BackgroundRecorder {
           }, 100)
         })
       return
+    } else if (message.command.includes('readDataFromUI')) {
+      this.getInputFromUserAndRecord(message, sender, 'Enter the name of the variable')
+      return
+    } else if (message.command.includes('addStep')) {
+      this.getInputFromUserAndRecord(message, sender, 'Enter the name of the Step')
+      return
     }
 
     //handle choose ok/cancel confirm
@@ -427,6 +444,88 @@ export default class BackgroundRecorder {
       )
       record(message.command, message.target, message.value)
     }
+    this.updateCommentInRecordedCommand(message.command, message.comment);
+    //if the element is inside table
+    /*if (message.recordedType) {
+      if (message.recordedType == 'table') {
+        var attrs = message.additionalData.split('=');
+        var rowType = attrs[1];
+        var recCommand = UiState.lastRecordedCommand;
+        if (recCommand) {
+          browser.windows.update(this.windowSession.ideWindowId, { focused: true })
+              .then(() => {setTimeout(() => {
+                  recCommand.setHasTableInput(true);
+                  recCommand.setTableInput({'SelectRow.rowType' : rowType});
+                  ModalState.toggleTableInputConfig();
+                  recCommand.toggleOpensTableInput();
+                }, 100)});
+        }
+      }
+    }*/
+  }
+
+  updateCommentInRecordedCommand(command, comment) {
+    var recCommand = UiState.lastRecordedCommand;
+    if (comment && recCommand) {
+      recCommand.setComment((actionCommentMap[command] ? actionCommentMap[command] : command) + ' ' + comment.replace(':', ''));
+    }
+  }
+
+  getInputFromUserAndRecord(message, sender, promptMsg) {
+    if (message.recordedType) {
+      //if recorded Type is set, it may be from Table or left navs
+      //Ignore reading variable in case of table as that will be generated based on user input
+      return;
+    }
+    UiState.toggleRecord();
+    /*var self = this;
+    browser.runtime.sendMessage({type: 'showModal', obj: 'Hello There...'}).then(function(response) {
+      message.value = response.data.aliasName;
+      if (message.insertBeforeLastCommand) {
+        record(message.command, message.target, message.value, true)
+      } else {
+        self.sendRecordNotification(
+            sender.tab.id,
+            message.command,
+            message.target,
+            message.value
+        )
+        record(message.command, message.target, message.value);
+        self.updateCommentInRecordedCommand(message.command, message.comment);
+      }
+      UiState.toggleRecord();
+      //focusRecordingWindow();
+    });*/
+    /*if (message.comment) {
+      record(message.command, message.target, message.comment.replace(/[^a-zA-Z0-9_]/ig, ''));
+      this.updateCommentInRecordedCommand(message.command, message.comment);
+      return;
+    }*/
+    // In Google Chrome, window.prompt() must be triggered in
+    // an actived tabs of front window, so we let panel window been focused
+    browser.windows
+        .update(this.windowSession.ideWindowId, { focused: true })
+        .then(() => {
+          // Even if window has been focused, window.prompt() still failed.
+          // Delay a little time to ensure that status has been updated
+          setTimeout(() => {
+            message.value = prompt(promptMsg)
+            if (message.insertBeforeLastCommand) {
+              record(message.command, message.target, message.value, true)
+            } else {
+              this.sendRecordNotification(
+                  sender.tab.id,
+                  message.command,
+                  message.target,
+                  message.value
+              )
+              record(message.command, message.target, message.value);
+              this.updateCommentInRecordedCommand(message.command, message.comment);
+            }
+            UiState.toggleRecord();
+            //focusRecordingWindow();
+          }, 100)
+        })
   }
 
   sendRecordNotification(tabId, command, target, value) {
