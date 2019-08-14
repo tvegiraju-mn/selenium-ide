@@ -111,7 +111,7 @@ export default class Panel extends React.Component {
     super(props)
     this.exportFn = function(exportedProject) {
       //Change below to send proper request
-      browser.runtime.sendMessage({type: 'data', obj: exportedProject})
+      browser.runtime.sendMessage({type: 'data', payload: exportedProject})
       UiState.stopRecording({ nameNewTest: false })
       UiState.displayedTest.clearAllCommands()
     }

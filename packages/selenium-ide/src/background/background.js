@@ -222,19 +222,19 @@ var focusSourceTab = function() {
 var onMessageListener = function(message, sender, sendResponse) {
   switch(message.type) {
     case "bglog":
-      console.log(message.obj);
+      console.log(message.payload);
       if (tabPort)
-        tabPort.postMessage({type: 'log', obj: message.obj});
+        tabPort.postMessage({type: 'log', payload: message.payload});
       break;
     case "data":
       if (tabPort) {
-        tabPort.postMessage({type: 'data', obj: message.obj});
+        tabPort.postMessage({type: 'data', payload: message.payload});
         focusSourceTab();
       }
       break;
     case "showModal":
       if (tabPort) {
-        tabPort.postMessage({type: 'showModal', obj: message.obj});
+        tabPort.postMessage({type: 'showModal', payload: message.payload});
         focusSourceTab();
         var modalHandler = function(request) {
           if (request.type == 'requestedData' ) {
@@ -296,7 +296,7 @@ browser.runtime.onConnectExternal.addListener(function(port) {
         if (request.payload && request.payload.appType) {
           appType = request.payload && request.payload.appType
         }
-        port.postMessage({type: 'log', obj: 'Ide Started with AppType: ' + appType + ' & URL: ' + url})
+        port.postMessage({type: 'log', payload: 'Ide Started with AppType: ' + appType + ' & URL: ' + url})
       } else if (request.type == 'CLOSEIDE') {
         browser.windows.remove(ideWindowId)
         port.disconnect();

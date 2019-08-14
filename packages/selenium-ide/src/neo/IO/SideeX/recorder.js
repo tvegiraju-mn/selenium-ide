@@ -446,22 +446,31 @@ export default class BackgroundRecorder {
     }
     this.updateCommentInRecordedCommand(message.command, message.comment);
     //if the element is inside table
-    /*if (message.recordedType) {
+    var recCommand = UiState.lastRecordedCommand;
+    if (!recCommand) return;
+    if (message.recordedType) {
       if (message.recordedType == 'table') {
-        var attrs = message.additionalData.split('=');
-        var rowType = attrs[1];
-        var recCommand = UiState.lastRecordedCommand;
-        if (recCommand) {
-          browser.windows.update(this.windowSession.ideWindowId, { focused: true })
-              .then(() => {setTimeout(() => {
-                  recCommand.setHasTableInput(true);
-                  recCommand.setTableInput({'SelectRow.rowType' : rowType});
-                  ModalState.toggleTableInputConfig();
-                  recCommand.toggleOpensTableInput();
-                }, 100)});
-        }
+        var attrValues = message.additionalData.split('|');
+        var rowAttrs = attrValues[0].split('=')
+        var rowType = rowAttrs[1];
+        var typeAttrs = attrValues[1].split('=')
+        var elementType = typeAttrs[1];
+        /*browser.windows.update(this.windowSession.ideWindowId, { focused: true })
+            .then(() => {setTimeout(() => {
+                recCommand.setHasTableInput(true);
+                recCommand.setTableInput({'SelectRow': {'rowType' : rowType}, 'SelectColumn': {'elementType' : elementType}});
+                ModalState.toggleTableInputConfig();
+                recCommand.toggleOpensTableInput();
+              }, 100)});*/
+        var selectTableData = {modalType: 'SelectTable', data: [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType}]}]};
+        UiState.toggleRecord();
+        browser.runtime.sendMessage({type: 'showModal', payload: selectTableData}).then(function(response) {
+          recCommand.setTableInput(response.data)
+          UiState.toggleRecord();
+        });
       }
-    }*/
+    } else
+      recCommand.setTableInput(undefined)
   }
 
   updateCommentInRecordedCommand(command, comment) {
@@ -479,7 +488,7 @@ export default class BackgroundRecorder {
     }
     UiState.toggleRecord();
     /*var self = this;
-    browser.runtime.sendMessage({type: 'showModal', obj: 'Hello There...'}).then(function(response) {
+    browser.runtime.sendMessage({type: 'showModal', payload: 'Hello There...'}).then(function(response) {
       message.value = response.data.aliasName;
       if (message.insertBeforeLastCommand) {
         record(message.command, message.target, message.value, true)

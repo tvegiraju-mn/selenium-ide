@@ -566,7 +566,7 @@ LocatorBuilders.prototype.getDisplayName = function(e) {
 }
 
 LocatorBuilders.prototype.logging = function(message) {
-    browser.runtime.sendMessage({type: "bglog", obj: message});
+    browser.runtime.sendMessage({type: "bglog", payload: message});
 }
 
 LocatorBuilders.setPreferredOrderByAppType = function() {
@@ -748,7 +748,7 @@ LocatorBuilders.add('table', function table(e) {
   if (elXpath) {
     var parXpath = '';
     if (LocatorBuilders.appType == 'MN') {
-      parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\')]';
+      parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\') or contains(@class,\'tableRow footerRow footerRow-\')]';
     } else {
       parXpath = elXpath + '/ancestor::div[contains(@id,\'tbl-container\')]'
     }
@@ -757,10 +757,26 @@ LocatorBuilders.add('table', function table(e) {
       var rowType = 'data';
       if (tdEl.getAttribute('class').includes('headerRow-')) {
         rowType = 'header';
+      } else if (tdEl.getAttribute('class').includes('footerRow-')) {
+        rowType = 'footer';
       }
+      var elementType = '';
+      var nodeName = e.nodeName.toLowerCase();
+      var eType = e.type ? e.type.toLowerCase() : '';
+      var classes = e.getAttribute('class') ? e.getAttribute('class').toLowerCase() : '';
+      if (nodeName == 'span' && !classes.includes('anchor') && !classes.includes('fa-fw'))
+        elementType = 'PLAIN_TEXT'
+      else if (nodeName == 'a' || (nodeName == 'span' && classes.includes('anchor')))
+        elementType = 'LINK'
+      else if ((nodeName == 'input' && eType != 'hidden') || nodeName == 'select')
+        elementType = 'OTHER'
+      else if (nodeName == 'button')
+        elementType = 'BUTTON'
+      else if (nodeName == 'img')
+        elementType = 'IMAGE'
       if (!LocatorBuilders.recordedType) {
         LocatorBuilders.recordedType = 'table';
-        LocatorBuilders.additionalData = 'rowType=' + rowType;
+        LocatorBuilders.additionalData = 'rowType=' + rowType + '|elementType=' + elementType;
         LocatorBuilders.displayName = undefined;
       }
       return 'table=' + elXpath;

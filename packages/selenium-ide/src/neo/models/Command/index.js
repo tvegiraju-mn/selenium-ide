@@ -45,14 +45,14 @@ export default class Command {
   /*@observable
   hasTableInput = false*/
   @observable
-  SelectTable = {
-    SelectRow: {
+  SelectTable = [{
+    SelectRow: [{
       rowType: 'data'
-    },
-    SelectColumn: {
+    }],
+    SelectColumn: [{
       elementType: 'PLAIN_TEXT'
-    }
-  }
+    }]
+  }]
   /*@observable
   opensTableInput = false*/
   @observable
@@ -175,12 +175,7 @@ export default class Command {
 
   @action.bound
   setTableInput(tableNewInput) {
-    if (tableNewInput) {
-      if (tableNewInput.SelectRow)  this.SelectTable.SelectRow = tableNewInput.SelectRow;
-      if (tableNewInput.SelectColumn)  this.SelectTable.SelectColumn = tableNewInput.SelectColumn;
-      if (tableNewInput.columnName)  this.SelectTable.columnName = tableNewInput.columnName;
-      if (tableNewInput.tableIndex)  this.SelectTable.tableIndex = tableNewInput.tableIndex;
-    }
+      this.SelectTable = tableNewInput;
   }
 
   /*@action.bound
