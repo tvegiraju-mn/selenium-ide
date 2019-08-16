@@ -32,6 +32,7 @@ const actionCommentMap = {
   'performWait' : 'Wait on',
   'jsclick' : 'Click on'
 }
+var tableData = undefined
 
 function getSelectedCase() {
   return {
@@ -424,9 +425,6 @@ export default class BackgroundRecorder {
           }, 100)
         })
       return
-    } else if (message.command.includes('readDataFromUI')) {
-      this.getInputFromUserAndRecord(message, sender, 'Enter the name of the variable')
-      return
     } else if (message.command.includes('addStep')) {
       this.getInputFromUserAndRecord(message, sender, 'Enter the name of the Step')
       return
@@ -448,6 +446,13 @@ export default class BackgroundRecorder {
     //if the element is inside table
     var recCommand = UiState.lastRecordedCommand;
     if (!recCommand) return;
+    if (message.command == 'readDataFromUI' || message.command == 'performWait') {
+      var readData = {modalType: message.command, data: { comment : message.comment}};
+      var callbackFn = function(response) {
+        recCommand.setOtherData(response.data)
+      }
+      this.updateDataFromWebAppInRecCommand(readData, callbackFn);
+    }
     if (message.recordedType) {
       if (message.recordedType == 'table') {
         var attrValues = message.additionalData.split('|');
@@ -462,15 +467,40 @@ export default class BackgroundRecorder {
                 ModalState.toggleTableInputConfig();
                 recCommand.toggleOpensTableInput();
               }, 100)});*/
-        var selectTableData = {modalType: 'SelectTable', data: [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType}]}]};
-        UiState.toggleRecord();
-        browser.runtime.sendMessage({type: 'showModal', payload: selectTableData}).then(function(response) {
+        var newTableData = [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType}]}]
+        if (tableData) {
+          newTableData = JSON.parse(JSON.stringify(tableData))
+          newTableData[0].SelectRow[0].rowType = rowType
+          newTableData[0].SelectColumn[0].elementType = elementType
+        }
+        var selectTableData = {modalType: 'SelectTable', data: newTableData};
+        var self = this;
+        var callbackFn = function(response) {
           recCommand.setTableInput(response.data)
-          UiState.toggleRecord();
-        });
+          tableData = response.data
+          var newComm = (response.data[0] && response.data[0].SelectColumn && response.data[0].SelectColumn[0] && response.data[0].SelectColumn[0].columnName ? response.data[0].SelectColumn[0].columnName : '')
+          if (newComm != '') {
+            newComm = (message.comment ? message.comment + ' in ' + newComm + ' column' : newComm + ' column')
+            self.updateCommentInRecordedCommand(message.command, newComm)
+          }
+        }
+        this.updateDataFromWebAppInRecCommand(selectTableData, callbackFn);
+      } else if (message.recordedType == 'leftNav') {
+        recCommand.setIsLeftNav('true');
+        var attrValues = message.additionalData.split('=')
+        var otherData = recCommand.getOtherData();
+        otherData.navLinks = attrValues[1]
+        recCommand.setOtherData(otherData)
       }
-    } else
-      recCommand.setTableInput(undefined)
+    }
+  }
+
+  updateDataFromWebAppInRecCommand(data, callbackFn) {
+    UiState.toggleRecord();
+    browser.runtime.sendMessage({type: 'showModal', payload: data}).then(function(response) {
+      callbackFn(response);
+      UiState.toggleRecord();
+    });
   }
 
   updateCommentInRecordedCommand(command, comment) {

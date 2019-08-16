@@ -45,14 +45,11 @@ export default class Command {
   /*@observable
   hasTableInput = false*/
   @observable
-  SelectTable = [{
-    SelectRow: [{
-      rowType: 'data'
-    }],
-    SelectColumn: [{
-      elementType: 'PLAIN_TEXT'
-    }]
-  }]
+  SelectTable
+  @observable
+  otherData
+  @observable
+  isLeftNav = 'false'
   /*@observable
   opensTableInput = false*/
   @observable
@@ -94,6 +91,11 @@ export default class Command {
       return type === TargetTypes.LOCATOR
     }
     return false
+  }
+
+  @computed
+  get getOtherData() {
+    return this.otherData ? this.otherData : {}
   }
 
   @action.bound
@@ -178,6 +180,16 @@ export default class Command {
       this.SelectTable = tableNewInput;
   }
 
+  @action.bound
+  setOtherData(newData) {
+    this.otherData = newData;
+  }
+
+  @action.bound
+  setIsLeftNav(isLeftNav) {
+    this.isLeftNav = isLeftNav;
+  }
+
   /*@action.bound
   toggleOpensTableInput() {
     this.opensTableInput = !this.opensTableInput
@@ -220,6 +232,12 @@ export default class Command {
       //this.setHasTableInput(jsRep.hasTableInput)
       this.setTableInput(jsRep.SelectTable)
     }
+    if (jsRep.otherData) {
+      this.setOtherData(jsRep.otherData)
+    }
+    if (jsRep.isLeftNav) {
+      this.setIsLeftNav(jsRep.isLeftNav)
+    }
   }
 
   export() {
@@ -241,6 +259,12 @@ export default class Command {
     if (this.SelectTable) {
       //exported.hasTableInput = this.hasTableInput
       exported.SelectTable = this.SelectTable
+    }
+    if (this.otherData) {
+      exported.otherData = this.otherData
+    }
+    if (this.isLeftNav && this.isLeftNav != 'false') {
+      exported.isLeftNav = this.isLeftNav
     }
 
     return exported
