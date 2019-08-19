@@ -835,7 +835,7 @@ LocatorBuilders.add('xpath:comppathRelative', function xpathComppathRelative(e) 
             //this.logging('inside xpath:comppathRelative: ' + locator);
             if (this.isElementUniqueWithXPath(locator, current.parentNode)) {
               if (current.parentNode.nodeName.toLowerCase() == 'a') {
-                LocatorBuilders.displayName = current.parentNode.innerText ? current.parentNode.innerText.trim() :
+                LocatorBuilders.displayName = (current.parentNode.innerText && current.parentNode.innerText.trim().length > 1) ? current.parentNode.innerText.trim() :
                     (LocatorBuilders.displayName ? LocatorBuilders.displayName : this.getDisplayName(current.parentNode));
                 return 'xpath=' + locator;
               }
