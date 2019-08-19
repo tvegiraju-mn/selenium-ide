@@ -32,7 +32,7 @@ const actionCommentMap = {
   'performWait' : 'Wait on',
   'jsclick' : 'Click on'
 }
-var tableData = undefined
+//var tableData = undefined
 
 function getSelectedCase() {
   return {
@@ -468,16 +468,16 @@ export default class BackgroundRecorder {
                 recCommand.toggleOpensTableInput();
               }, 100)});*/
         var newTableData = [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType}]}]
-        if (tableData) {
+        /*if (tableData) {
           newTableData = JSON.parse(JSON.stringify(tableData))
           newTableData[0].SelectRow[0].rowType = rowType
           newTableData[0].SelectColumn[0].elementType = elementType
-        }
+        }*/
         var selectTableData = {modalType: 'SelectTable', data: newTableData};
         var self = this;
         var callbackFn = function(response) {
           recCommand.setTableInput(response.data)
-          tableData = response.data
+          //tableData = response.data
           var newComm = (response.data[0] && response.data[0].SelectColumn && response.data[0].SelectColumn[0] && response.data[0].SelectColumn[0].columnName ? response.data[0].SelectColumn[0].columnName : '')
           if (newComm != '') {
             newComm = (message.comment ? message.comment + ' in ' + newComm + ' column' : newComm + ' column')
@@ -487,10 +487,11 @@ export default class BackgroundRecorder {
         this.updateDataFromWebAppInRecCommand(selectTableData, callbackFn);
       } else if (message.recordedType == 'leftNav') {
         recCommand.setIsLeftNav('true');
-        var attrValues = message.additionalData.split('=')
-        var otherData = recCommand.getOtherData();
-        otherData.navLinks = attrValues[1]
-        recCommand.setOtherData(otherData)
+        var attrValues = message.additionalData.split('=');
+        var otherData = recCommand.otherData;
+        if (!otherData) otherData = {};
+        otherData.navLinks = attrValues[1];
+        recCommand.setOtherData(otherData) ;
       }
     }
   }

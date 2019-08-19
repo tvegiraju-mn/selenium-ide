@@ -93,11 +93,6 @@ export default class Command {
     return false
   }
 
-  @computed
-  get getOtherData() {
-    return this.otherData ? this.otherData : {}
-  }
-
   @action.bound
   clone() {
     const clone = new Command()

@@ -727,7 +727,7 @@ LocatorBuilders.add('leftNav', function leftNav(e) {
             var navLinks = '', navLinkIgnoreList = ['Components', 'Included Lines'];
             //Ignore last element
             for (var k = 0 ; k < dynamicLinks.length - 1; k++) {
-              if (!navLinkIgnoreList.includes(dynamicLinks[k]))
+              //if (!navLinkIgnoreList.includes(dynamicLinks[k]))
                 navLinks = dynamicLinks[k] + (navLinks == '' ? '' : '->' + navLinks);
             }
             LocatorBuilders.additionalData = 'navLinks=' + navLinks;
@@ -748,7 +748,8 @@ LocatorBuilders.add('table', function table(e) {
   if (elXpath) {
     var parXpath = '';
     if (LocatorBuilders.appType == 'MN') {
-      parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\') or contains(@class,\'tableRow footerRow footerRow-\')]';
+      parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\')]';
+      // or contains(@class,\'tableRow footerRow footerRow-\')
     } else {
       parXpath = elXpath + '/ancestor::div[contains(@id,\'tbl-container\')]'
     }
@@ -757,9 +758,9 @@ LocatorBuilders.add('table', function table(e) {
       var rowType = 'data';
       if (tdEl.getAttribute('class').includes('headerRow-')) {
         rowType = 'header';
-      } else if (tdEl.getAttribute('class').includes('footerRow-')) {
+      }/*else if (tdEl.getAttribute('class').includes('footerRow-')) {
         rowType = 'footer';
-      }
+      }*/
       var elementType = '';
       var nodeName = e.nodeName.toLowerCase();
       var eType = e.type ? e.type.toLowerCase() : '';
