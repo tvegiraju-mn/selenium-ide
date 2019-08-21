@@ -58,6 +58,7 @@ export default class BackgroundRecorder {
     if (browser && browser.runtime && browser.runtime.onMessage) {
       browser.runtime.onMessage.addListener(this.attachRecorderRequestHandler)
       browser.runtime.onMessage.addListener(this.frameCountHandler)
+      browser.runtime.onMessage.addListener(this.initRecordingMessageHandler)
     }
   }
 
@@ -496,6 +497,16 @@ export default class BackgroundRecorder {
     }
   }
 
+  initRecordingMessageHandler(message, sender, sendResponse) {
+    if (message.initRecording) {
+      //First stopping the recording
+      UiState.stopRecording({ nameNewTest: false });
+      if (message.clearAllCommands)
+        UiState.displayedTest.clearAllCommands();
+      UiState.toggleRecord();
+    }
+  }
+
   updateDataFromWebAppInRecCommand(data, callbackFn) {
     UiState.toggleRecord();
     browser.runtime.sendMessage({type: 'showModal', payload: data}).then(function(response) {
@@ -608,6 +619,7 @@ export default class BackgroundRecorder {
     this.attachRecorderRequestHandler = this.attachRecorderRequestHandler.bind(
       this
     )
+    this.initRecordingMessageHandler = this.initRecordingMessageHandler.bind(this)
     this.frameCountHandler = this.frameCountHandler.bind(this)
   }
 

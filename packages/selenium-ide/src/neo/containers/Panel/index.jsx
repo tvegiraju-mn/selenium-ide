@@ -113,7 +113,7 @@ export default class Panel extends React.Component {
       //Change below to send proper request
       browser.runtime.sendMessage({type: 'data', payload: exportedProject})
       UiState.stopRecording({ nameNewTest: false })
-      UiState.displayedTest.clearAllCommands()
+      //UiState.displayedTest.clearAllCommands()
     }
     this.state = { project }
     this.parseKeyDown = this.parseKeyDown.bind(this)

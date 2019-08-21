@@ -33,7 +33,9 @@ function openPanel(tab) {
     browser.windows
       .update(ideWindowId, {
         focused: true,
-      })
+      }).then(function() {
+          startRecording();
+        })
       .catch(function() {
         ideWindowId == undefined
         openPanel(tab)
@@ -72,6 +74,7 @@ function openPanel(tab) {
                 master[contentWindowId] = panelWindowInfo.id
                 resolve(panelWindowInfo)
                 clearInterval(interval)
+                startRecording(panelWindowInfo.tabs[0].id);
               }
             })
         }, 200)
@@ -209,6 +212,7 @@ browser.runtime.onInstalled.addListener(() => {
 let url = undefined
 let appType = undefined
 let tabPort = undefined, tabId = undefined, windowId = undefined
+let tabIdIde = undefined
 
 var focusSourceTab = function() {
   browser.tabs.update(tabId, {
@@ -217,6 +221,16 @@ var focusSourceTab = function() {
   browser.windows.update(windowId, {
     focused: true,
   });
+};
+
+function startRecording(ideTabId) {
+  if (ideTabId)  tabIdIde = ideTabId
+  if (tabPort && tabId && tabIdIde) {
+    browser.tabs.sendMessage(tabIdIde, {
+      initRecording : true,
+      clearAllCommands: true
+    })
+  }
 };
 
 var onMessageListener = function(message, sender, sendResponse) {
