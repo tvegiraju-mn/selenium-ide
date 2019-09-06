@@ -36,6 +36,7 @@ const actionCommentMap = {
   'jsclick' : 'Click on'
 }
 const actionsReqDetails = ['readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues'];
+var ignoreTableDetailsForActions = ['ComparisonOfTwoValues', 'performWait']
 //var tableData = undefined
 
 function getSelectedCase() {
@@ -458,6 +459,10 @@ export default class BackgroundRecorder {
         var dataInputToWebapp = {modalType: message.command, data: { comment : message.comment}};
         var callbackFn = function(response) {
           recCommand.setOtherData(response.data);
+          if (ignoreTableDetailsForActions.indexOf(message.command) > -1) {
+            var newTarget = message.target && message.target[1] ? message.target[1][0] : message.target[0][0];
+            recCommand.setTarget(newTarget);
+          }
           self.startRecording();
         }
         self.updateDataFromWebAppInRecCommand(dataInputToWebapp, callbackFn, true);
@@ -465,7 +470,7 @@ export default class BackgroundRecorder {
         self.startRecording();
     }
     if (message.recordedType) {
-      if (message.recordedType == 'table' && message.command != 'ComparisonOfTwoValues') {
+      if (message.recordedType == 'table' && ignoreTableDetailsForActions.indexOf(message.command) == -1) {
         var attrValues = message.additionalData.split('|');
         var rowAttrs = attrValues[0].split('=')
         var rowType = rowAttrs[1];
@@ -506,7 +511,7 @@ export default class BackgroundRecorder {
         recCommand.setOtherData(otherData) ;
       }
     }
-    if (message.recordedType != 'table' || message.command == 'ComparisonOfTwoValues')
+    if (message.recordedType != 'table' || ignoreTableDetailsForActions.indexOf(message.command) > -1)
       getResponseFromWebApp();
   }
 
