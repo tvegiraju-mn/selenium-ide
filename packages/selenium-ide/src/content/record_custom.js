@@ -658,6 +658,7 @@ Recorder.addEventHandler(
     let tmpText = locatorBuilders.buildAll(event.target)
     let tmpVal = bot.dom.getVisibleText(event.target)
     let tmpTitle = goog.string.normalizeSpaces(event.target.ownerDocument.title)
+    var customContextMenuItems = ['readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
     myPort.onMessage.addListener(function(m) {
       if (m.cmd.includes('Text')) {
         record(m.cmd, tmpText, tmpVal)
@@ -669,10 +670,8 @@ Recorder.addEventHandler(
         record('jsclick', locatorBuilders.buildAll(event.target), '')
       } else if (m.cmd === 'addStep') {
         record('addStep', [['']], '')
-      } else if (m.cmd === 'readDataFromUI') {
-        record('readDataFromUI', locatorBuilders.buildAll(event.target), '')
-      } else if (m.cmd === 'performWait') {
-        record('performWait', locatorBuilders.buildAll(event.target), '')
+      } else if (customContextMenuItems.indexOf(m.cmd) > -1) {
+        record(m.cmd, locatorBuilders.buildAll(event.target), '')
       }
       myPort.onMessage.removeListener(this)
     })

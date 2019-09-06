@@ -43,8 +43,46 @@ export const Commands = [
       type: TargetTypes.LOCATOR,
       description: `Read data from the Target element`,
       target: ArgTypes.locator,
-      value: ArgTypes.variableName,
       prefix: 'Reading',
+    },
+  ],
+  [
+    'readElementPresence',
+    {
+      name: 'read element presence',
+      type: TargetTypes.LOCATOR,
+      description: `Read element presence of the Target element`,
+      target: ArgTypes.locator,
+      prefix: 'Reading',
+    },
+  ],
+  [
+    'readElementAttribute',
+    {
+      name: 'read element attribute',
+      type: TargetTypes.LOCATOR,
+      description: `Read Target element attribute`,
+      target: ArgTypes.locator,
+      prefix: 'Reading',
+    },
+  ],
+  [
+    'readElementStyle',
+    {
+      name: 'read element style',
+      type: TargetTypes.LOCATOR,
+      description: `Read Target element style`,
+      target: ArgTypes.locator,
+      prefix: 'Reading',
+    },
+  ],
+  [
+    'ComparisonOfTwoValues',
+    {
+      name: 'Assert Two Values',
+      type: TargetTypes.LOCATOR,
+      description: `Assert values`,
+      target: ArgTypes.locator,
     },
   ],
   [

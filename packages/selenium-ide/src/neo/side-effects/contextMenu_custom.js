@@ -29,6 +29,30 @@ function createContextMenus() {
     contexts: ['all'],
   })
   browser.contextMenus.create({
+    id: 'readElementPresence',
+    title: 'Read Element Presence',
+    documentUrlPatterns: ['<all_urls>'],
+    contexts: ['all'],
+  })
+  browser.contextMenus.create({
+    id: 'readElementAttribute',
+    title: 'Read Element Attribute',
+    documentUrlPatterns: ['<all_urls>'],
+    contexts: ['all'],
+  })
+  browser.contextMenus.create({
+    id: 'readElementStyle',
+    title: 'Read Element Style',
+    documentUrlPatterns: ['<all_urls>'],
+    contexts: ['all'],
+  })
+  browser.contextMenus.create({
+    id: 'ComparisonOfTwoValues',
+    title: 'Add Assert Action',
+    documentUrlPatterns: ['<all_urls>'],
+    contexts: ['all'],
+  })
+  browser.contextMenus.create({
     id: 'performWait',
     title: 'Wait Action',
     documentUrlPatterns: ['<all_urls>'],

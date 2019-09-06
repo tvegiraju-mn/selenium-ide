@@ -162,6 +162,7 @@ browser.windows.onRemoved.addListener(function(windowId) {
   }
   if (windowId === ideWindowId) {
     ideWindowId = undefined
+    url = undefined, appType = undefined, tabPort = undefined, tabId = undefined, windowId = undefined, tabIdIde = undefined;
     Promise.all(
       window.openedWindowIds.map(windowId =>
         browser.windows.remove(windowId).catch(() => {

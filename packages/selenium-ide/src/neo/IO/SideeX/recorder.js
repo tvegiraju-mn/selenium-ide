@@ -28,10 +28,14 @@ const actionCommentMap = {
   'type' : 'Entering',
   'select' : 'Selecting',
   'readDataFromUI' : 'Reading',
+  'readElementAttribute' : 'Reading Attribute',
+  'readElementStyle' : 'Reading Style',
+  'readElementPresence' : 'Reading Presence',
   'checkbox': 'Check/Uncheck',
   'performWait' : 'Wait on',
   'jsclick' : 'Click on'
 }
+const actionsReqDetails = ['readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues'];
 //var tableData = undefined
 
 function getSelectedCase() {
@@ -390,14 +394,14 @@ export default class BackgroundRecorder {
         message.frameLocation
     }
     if (
-      message.command.includes('Value') &&
+      message.command.includes('Value') && actionsReqDetails.indexOf(message.command) == -1 &&
       typeof message.value === 'undefined'
     ) {
       logger.error(
         "This element does not have property 'value'. Please change to use storeText command."
       )
       return
-    } else if (message.command.includes('Text') && message.value === '') {
+    } else if (message.command.includes('Text') && actionsReqDetails.indexOf(message.command) == -1 && message.value === '') {
       logger.error(
         "This element does not have property 'Text'. Please change to use storeValue command."
       )
@@ -447,15 +451,21 @@ export default class BackgroundRecorder {
     //if the element is inside table
     var recCommand = UiState.lastRecordedCommand;
     if (!recCommand) return;
-    if (message.command == 'readDataFromUI' || message.command == 'performWait') {
-      var readData = {modalType: message.command, data: { comment : message.comment}};
-      var callbackFn = function(response) {
-        recCommand.setOtherData(response.data)
-      }
-      this.updateDataFromWebAppInRecCommand(readData, callbackFn);
+    var self = this;
+    var getResponseFromWebApp = function() {
+      if (actionsReqDetails.indexOf(message.command) > -1) {
+        self.stopRecording();
+        var dataInputToWebapp = {modalType: message.command, data: { comment : message.comment}};
+        var callbackFn = function(response) {
+          recCommand.setOtherData(response.data);
+          self.startRecording();
+        }
+        self.updateDataFromWebAppInRecCommand(dataInputToWebapp, callbackFn, true);
+      } else
+        self.startRecording();
     }
     if (message.recordedType) {
-      if (message.recordedType == 'table') {
+      if (message.recordedType == 'table' && message.command != 'ComparisonOfTwoValues') {
         var attrValues = message.additionalData.split('|');
         var rowAttrs = attrValues[0].split('=')
         var rowType = rowAttrs[1];
@@ -475,7 +485,6 @@ export default class BackgroundRecorder {
           newTableData[0].SelectColumn[0].elementType = elementType
         }*/
         var selectTableData = {modalType: 'SelectTable', data: newTableData};
-        var self = this;
         var callbackFn = function(response) {
           recCommand.setTableInput(response.data)
           //tableData = response.data
@@ -484,8 +493,10 @@ export default class BackgroundRecorder {
             newComm = (message.comment ? message.comment + ' in ' + newComm + ' column' : newComm + ' column')
             self.updateCommentInRecordedCommand(message.command, newComm)
           }
+          getResponseFromWebApp();
         }
-        this.updateDataFromWebAppInRecCommand(selectTableData, callbackFn);
+        self.stopRecording();
+        this.updateDataFromWebAppInRecCommand(selectTableData, callbackFn, actionsReqDetails.indexOf(message.command) > -1);
       } else if (message.recordedType == 'leftNav') {
         recCommand.setIsLeftNav('true');
         var attrValues = message.additionalData.split('=');
@@ -495,23 +506,38 @@ export default class BackgroundRecorder {
         recCommand.setOtherData(otherData) ;
       }
     }
+    if (message.recordedType != 'table' || message.command == 'ComparisonOfTwoValues')
+      getResponseFromWebApp();
+  }
+
+  startRecording() {
+    if (!UiState.isRecording)
+      UiState.toggleRecord();
+}
+
+  stopRecording() {
+    if (UiState.isRecording)
+      UiState.toggleRecord();
   }
 
   initRecordingMessageHandler(message, sender, sendResponse) {
     if (message.initRecording) {
       //First stopping the recording
-      UiState.stopRecording({ nameNewTest: false });
+      this.stopRecording();
       if (message.clearAllCommands)
         UiState.displayedTest.clearAllCommands();
-      UiState.toggleRecord();
+      this.startRecording();
     }
   }
 
-  updateDataFromWebAppInRecCommand(data, callbackFn) {
-    UiState.toggleRecord();
+  updateDataFromWebAppInRecCommand(data, callbackFn, noToggling) {
+    var self = this;
+    if (!noToggling)
+      self.stopRecording();
     browser.runtime.sendMessage({type: 'showModal', payload: data}).then(function(response) {
       callbackFn(response);
-      UiState.toggleRecord();
+      if (!noToggling)
+        self.startRecording();
     });
   }
 

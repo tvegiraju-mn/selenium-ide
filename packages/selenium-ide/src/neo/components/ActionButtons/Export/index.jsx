@@ -17,26 +17,25 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
-import ActionButton from '../ActionButton'
 import classNames from 'classnames'
 import { parse } from 'modifier-keys'
+import './style.css'
 
 export default class ExportButton extends React.Component {
   render() {
     const props = { ...this.props }
     delete props.unsaved
     return (
-      <ActionButton
-        data-tip={`<p>Export project to WebApp<span style="color: #929292;padding-left: 5px;">${parse(
-          'c',
-          { primaryKey: true, shiftKey: true }
-        )}</span></p>`}
+      <button
+        type="button"
+        value="E"
+        data-tip={`<p>Export project to WebApp<span style="color: #929292;padding-left: 5px;"> Ctrl+Shift+C</span></p>`}
         {...props}
         className={classNames(
-          'si-export',
+          'export-webapp',
           this.props.className
         )}
-      /> // eslint-disable-line react/prop-types
+      >E</button>
     )
   }
 
