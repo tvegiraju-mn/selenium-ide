@@ -51,11 +51,11 @@ LocatorBuilders.prototype.build = function(e) {
   }
 }
 
-LocatorBuilders.prototype.buildAll = function(el) {
+LocatorBuilders.prototype.buildAll = function(el, ignoreInnerText) {
   LocatorBuilders.recordedType = undefined;
   LocatorBuilders.additionalData = undefined;
   let e = core.firefox.unwrap(el) //Samit: Fix: Do the magic to get it to work in Firefox 4
-  LocatorBuilders.displayName = this.getDisplayName(e);
+  LocatorBuilders.displayName = this.getDisplayName(e, ignoreInnerText);
   let locator
   let locators = []
   for (let i = 0; i < LocatorBuilders.order.length; i++) {
@@ -534,8 +534,8 @@ LocatorBuilders.add('xpath:innerText', function xpathInnerText(el) {
   }
 })
 
-LocatorBuilders.prototype.getDisplayName = function(e) {
-  if (e.innerText) {
+LocatorBuilders.prototype.getDisplayName = function(e, ignoreInnerText) {
+  if (e.innerText && ignoreInnerText != true) {
     var innerText = this.getInnerTextWithoutChildren(e);
     if (innerText.length > 1)
       return innerText;
@@ -546,11 +546,19 @@ LocatorBuilders.prototype.getDisplayName = function(e) {
   if (e.getAttribute('placeholder')) {
     return e.getAttribute('placeholder');
   }
-  if (LocatorBuilders.appType == 'MN') {
-    var tagName = e.nodeName.toLowerCase();
-    if (tagName == 'input' && (e.getAttribute('type') == 'checkbox' || e.getAttribute('type') == 'radio')) {
-      return undefined;
+  var tagName = e.nodeName.toLowerCase();
+  if (tagName == 'input' && (e.getAttribute('type') == 'checkbox' || e.getAttribute('type') == 'radio')) {
+    if (e.id) {
+      var lblXpath = '//label[@for=\'' + e.id + '\']'
+      var lblEl = this.findElement(lblXpath);
+      if (lblEl && lblEl.innerText) {
+        var labelText = this.getInnerTextWithoutChildren(lblEl);
+        if (labelText.length > 1)
+          return labelText;
+      }
     }
+  }
+  if (LocatorBuilders.appType == 'MN') {
     var elXpath = this.getXpathOfAnElement(e, false);
     if (elXpath) {
       var labelXpath = elXpath + '/preceding::*[((local-name() = \'span\' and contains(@domattr,\'extField\')) or (local-name() = \'label\' and contains(@class,\'left\'))) and string-length(normalize-space(text())) > 1][1]';
@@ -572,11 +580,11 @@ LocatorBuilders.prototype.logging = function(message) {
 LocatorBuilders.setPreferredOrderByAppType = function() {
   function setOrder(appType) {
     if (appType == 'MN')
-      LocatorBuilders.setPreferredOrder('leftNav,table,xpath:comppath,xpath:comppathRelative,id,xpath:attributes,xpath:link,linkText,name,' +
-          'xpath:innerText,xpath:img,xpath:idRelative,xpath:href,xpath:position,css:data-attr');
+      LocatorBuilders.setPreferredOrder('leftNav,table,xpath:comppath,xpath:comppathRelative,xpath:attributes,xpath:link,linkText,name,' +
+          'xpath:innerText,xpath:img,id,xpath:idRelative,xpath:href,xpath:position,css:data-attr');
     else if (appType == 'Flex')
-      LocatorBuilders.setPreferredOrder('leftNav,table,xpath:attributes,name,id,xpath:link,xpath:idRelative,xpath:innerText,linkText,css:data-attr,' +
-          'xpath:img,xpath:href,xpath:position,xpath:comppath,xpath:comppathRelative');
+      LocatorBuilders.setPreferredOrder('table,xpath:attributes,name,id,xpath:link,xpath:idRelative,xpath:innerText,linkText,' +
+          'xpath:img,xpath:href,xpath:position,css:data-attr,leftNav,xpath:comppath,xpath:comppathRelative');
   }
   function getAppType(setOrderFn) {
     let appType = 'MN';
@@ -724,11 +732,10 @@ LocatorBuilders.add('leftNav', function leftNav(e) {
         if (this.isElementUniqueWithXPath('//' + elXpath, e)) {
           if (dynamicLinks.length >= 2 && !LocatorBuilders.recordedType) {
             LocatorBuilders.recordedType = 'leftNav';
-            var navLinks = '', navLinkIgnoreList = ['Components', 'Included Lines'];
+            var navLinks = '';
             //Ignore last element
             for (var k = 0 ; k < dynamicLinks.length - 1; k++) {
-              //if (!navLinkIgnoreList.includes(dynamicLinks[k]))
-                navLinks = dynamicLinks[k] + (navLinks == '' ? '' : '->' + navLinks);
+              navLinks = dynamicLinks[k] + (navLinks == '' ? '' : '->' + navLinks);
             }
             LocatorBuilders.additionalData = 'navLinks=' + navLinks;
             this.logging('From leftNav: ' + LocatorBuilders.additionalData);

@@ -110,6 +110,8 @@ function eventIsTrusted(event) {
   return isTest ? true : event.isTrusted
 }
 
+let ignoreClickOnOtherTags = ['select', 'option', 'textarea'];
+
 // © Jie-Lin You, SideeX Team
 Recorder.addEventHandler(
   'clickAt',
@@ -123,7 +125,7 @@ Recorder.addEventHandler(
       var tagName = event.target.nodeName.toLowerCase();
       var type = event.target.type
       var shouldRecordClick = true;
-      if (('input' == tagName && Recorder.inputTypes.indexOf(type) >= 0) || 'select' == tagName || 'option' == tagName) {
+      if (('input' == tagName && Recorder.inputTypes.indexOf(type) > -1) || ignoreClickOnOtherTags.indexOf(tagName) > -1) {
         shouldRecordClick = false;
       }
       if (!this.recordingState.preventClickTwice && shouldRecordClick) {
@@ -649,6 +651,9 @@ Recorder.addEventHandler(
 )
 // END
 
+let customContextMenuItems = ['readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
+let ignoreInnerTextDisplayNameForCommands = ['readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle']
+
 // © Ming-Hung Hsu, SideeX Team
 Recorder.addEventHandler(
   'contextMenu',
@@ -658,7 +663,6 @@ Recorder.addEventHandler(
     let tmpText = locatorBuilders.buildAll(event.target)
     let tmpVal = bot.dom.getVisibleText(event.target)
     let tmpTitle = goog.string.normalizeSpaces(event.target.ownerDocument.title)
-    var customContextMenuItems = ['readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
     myPort.onMessage.addListener(function(m) {
       if (m.cmd.includes('Text')) {
         record(m.cmd, tmpText, tmpVal)
@@ -671,7 +675,7 @@ Recorder.addEventHandler(
       } else if (m.cmd === 'addStep') {
         record('addStep', [['']], '')
       } else if (customContextMenuItems.indexOf(m.cmd) > -1) {
-        record(m.cmd, locatorBuilders.buildAll(event.target), '')
+        record(m.cmd, locatorBuilders.buildAll(event.target, ignoreInnerTextDisplayNameForCommands.indexOf(m.cmd) > -1), '')
       }
       myPort.onMessage.removeListener(this)
     })
