@@ -288,7 +288,7 @@ LocatorBuilders.add('css:data-attr', function cssDataAttr(e) {
 })
 
 LocatorBuilders.add('id', function id(e) {
-  if (e.id && e.id.split(/\d+/).length == 1) {
+  if (e.id && (e.id.split(/\d+/).length == 1 || LocatorBuilders.appType != 'MN')) {
     return 'id=' + e.id
   }
   return null
@@ -308,6 +308,8 @@ LocatorBuilders.add('linkText', function linkText(e) {
 
 LocatorBuilders.add('name', function name(e) {
   if (e.name) {
+    if (LocatorBuilders.appType != 'MN')
+      return 'name=' + e.name
     var splitByNumber = e.name.split(/\d+/)
     if (splitByNumber.length == 1) {
       return 'name=' + e.name
@@ -577,28 +579,37 @@ LocatorBuilders.prototype.logging = function(message) {
     browser.runtime.sendMessage({type: "bglog", payload: message});
 }
 
-LocatorBuilders.setPreferredOrderByAppType = function() {
-  function setOrder(appType) {
-    if (appType == 'MN')
-      LocatorBuilders.setPreferredOrder('leftNav,table,xpath:comppath,xpath:comppathRelative,xpath:attributes,xpath:link,linkText,name,' +
-          'xpath:innerText,xpath:img,id,xpath:idRelative,xpath:href,xpath:position,css:data-attr');
-    else if (appType == 'Flex')
-      LocatorBuilders.setPreferredOrder('table,xpath:attributes,name,id,xpath:link,xpath:idRelative,xpath:innerText,linkText,' +
-          'xpath:img,xpath:href,xpath:position,css:data-attr,leftNav,xpath:comppath,xpath:comppathRelative');
-  }
-  function getAppType(setOrderFn) {
-    let appType = 'MN';
+LocatorBuilders.setPreferredOrderByAppType = function(appType) {
+  LocatorBuilders.appType = appType;
+  if (appType == 'MN')
+    LocatorBuilders.setPreferredOrder('leftNav,table,xpath:comppath,xpath:comppathRelative,xpath:attributes,xpath:link,linkText,name,' +
+        'xpath:innerText,xpath:img,id,xpath:idRelative,xpath:href,xpath:position,css:data-attr');
+  else if (appType == 'Flex')
+    LocatorBuilders.setPreferredOrder('table,xpath:attributes,name,id,xpath:link,xpath:idRelative,xpath:innerText,linkText,' +
+        'xpath:img,xpath:href,xpath:position,css:data-attr,leftNav,xpath:comppath,xpath:comppathRelative');
+  else if (appType == 'BOB')
+    LocatorBuilders.setPreferredOrder('table,id,linkText,name,css:data-attr,xpath:link,xpath:img,xpath:attributes,xpath:idRelative,' +
+        'xpath:href,xpath:position,xpath:innerText,leftNav,xpath:comppath,xpath:comppathRelative');
+  else
+    LocatorBuilders.setPreferredOrder('id,linkText,name,css:data-attr,xpath:link,xpath:img,xpath:attributes,xpath:idRelative,' +
+        'xpath:href,xpath:position,xpath:innerText,table,leftNav,xpath:comppath,xpath:comppathRelative');
+  console.log('Updated order for App Type: ' + LocatorBuilders.appType);
+}
+
+LocatorBuilders.setPreferredOrderByAppTypeFirstTime = function() {
+  function getAppType() {
+    let appType = undefined;
     browser.runtime.sendMessage({type: "getAppType"}).then(function(response) {
       if (response && response.appType) {
         appType = response.appType;
-        LocatorBuilders.appType = appType;
-        setOrderFn(appType);
+        LocatorBuilders.setPreferredOrderByAppType(appType);
+        console.log('Updated First time order for App Type: ' + LocatorBuilders.appType);
       }
     });
     return appType;
   }
-  let appType = getAppType(setOrder);
-  setOrder(appType);
+  let appType = getAppType();
+  LocatorBuilders.setPreferredOrderByAppType(appType);
 }
 
 LocatorBuilders.prototype.isElementUniqueWithXPath = function(xpath, e) {
@@ -858,4 +869,4 @@ LocatorBuilders.add('xpath:comppathRelative', function xpathComppathRelative(e) 
   return null;
 })
 
-LocatorBuilders.setPreferredOrderByAppType()
+LocatorBuilders.setPreferredOrderByAppTypeFirstTime()

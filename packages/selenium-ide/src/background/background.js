@@ -229,6 +229,7 @@ function startRecording(ideTabId) {
   if (tabPort && tabId && tabIdIde) {
     browser.tabs.sendMessage(tabIdIde, {
       initRecording : true,
+      appType : appType,
       clearAllCommands: true
     })
   }
@@ -304,13 +305,23 @@ browser.runtime.onConnectExternal.addListener(function(port) {
             windowId = currTab.windowId
           }
         });
-        openPanel({windowId: 0})
         if (request.payload && request.payload.url) {
-          url = request.payload && request.payload.url
+          if (url && url != request.payload.url) {
+            browser.runtime.sendMessage({newUrl : request.payload.url}).then(function(response) {
+              port.postMessage({type : 'log', payload: 'Successfully updated URL to :' + request.payload.url});
+            });
+          }
+          url = request.payload.url
         }
         if (request.payload && request.payload.appType) {
-          appType = request.payload && request.payload.appType
+          if (appType && appType != request.payload.appType) {
+            browser.runtime.sendMessage({newAppType : request.payload.appType}).then(function(response) {
+              port.postMessage({type : 'log', payload: 'Successfully updated AppType to :' + request.payload.appType});
+            });
+          }
+          appType = request.payload.appType
         }
+        openPanel({windowId: 0})
         port.postMessage({type: 'log', payload: 'Ide Started with AppType: ' + appType + ' & URL: ' + url})
       } else if (request.type == 'CLOSEIDE') {
         browser.windows.remove(ideWindowId)

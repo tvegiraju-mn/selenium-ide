@@ -164,6 +164,13 @@ function attachRecorderHandler(message, _sender, sendResponse) {
   }
 }
 
+function updateAppTypeHandler(message, _sender, sendResponse) {
+  if (message.updateAppType) {
+    LocatorBuilders.setPreferredOrderByAppType(message.appType)
+    sendResponse(true)
+  }
+}
+
 function detachRecorderHandler(message, _sender, sendResponse) {
   if (message.detachRecorder) {
     recorder.detach()
@@ -175,6 +182,7 @@ const recorder = new Recorder(window)
 
 // recorder event handlers
 browser.runtime.onMessage.addListener(attachRecorderHandler)
+browser.runtime.onMessage.addListener(updateAppTypeHandler)
 browser.runtime.onMessage.addListener(detachRecorderHandler)
 
 function addRecordingIndicator() {
@@ -222,7 +230,8 @@ function addRecordingIndicator() {
         )
         recordingIndicator.style.borderColor = 'black'
         setTimeout(() => {
-          recordingIndicator.style.borderColor = '#d30100'
+          if (recordingIndicator)
+            recordingIndicator.style.borderColor = '#d30100'
         }, 1000)
         sendResponse(true)
       }

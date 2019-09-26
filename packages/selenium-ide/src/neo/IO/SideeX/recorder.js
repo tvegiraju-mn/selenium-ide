@@ -37,6 +37,7 @@ const actionCommentMap = {
 }
 const actionsReqDetails = ['readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues'];
 var ignoreTableDetailsForActions = ['ComparisonOfTwoValues', 'performWait']
+var appType = undefined
 //var tableData = undefined
 
 function getSelectedCase() {
@@ -69,6 +70,7 @@ export default class BackgroundRecorder {
 
   async attachToTab(tabId) {
     await browser.tabs.sendMessage(tabId, { attachRecorder: true })
+    await browser.tabs.sendMessage(tabId, { updateAppType: true, appType: appType })
   }
 
   async detachFromTab(tabId) {
@@ -529,6 +531,7 @@ export default class BackgroundRecorder {
     if (message.initRecording) {
       //First stopping the recording
       this.stopRecording();
+      appType = message.appType;
       if (message.clearAllCommands)
         UiState.displayedTest.clearAllCommands();
       this.startRecording();

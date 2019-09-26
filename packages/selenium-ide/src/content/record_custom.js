@@ -651,7 +651,7 @@ Recorder.addEventHandler(
 )
 // END
 
-let customContextMenuItems = ['readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
+let customContextMenuItems = ['jsclick', 'readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
 let ignoreInnerTextDisplayNameForCommands = ['readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle']
 
 // © Ming-Hung Hsu, SideeX Team
@@ -660,18 +660,15 @@ Recorder.addEventHandler(
   'contextmenu',
   function(event) {
     let myPort = browser.runtime.connect()
-    let tmpText = locatorBuilders.buildAll(event.target)
     let tmpVal = bot.dom.getVisibleText(event.target)
     let tmpTitle = goog.string.normalizeSpaces(event.target.ownerDocument.title)
     myPort.onMessage.addListener(function(m) {
       if (m.cmd.includes('Text')) {
-        record(m.cmd, tmpText, tmpVal)
+        record(m.cmd, locatorBuilders.buildAll(event.target), tmpVal)
       } else if (m.cmd.includes('Title')) {
         record(m.cmd, [[tmpTitle]], '')
       } else if (m.cmd.includes('Value')) {
-        record(m.cmd, tmpText, event.target.value)
-      } else if (m.cmd === 'jsclick') {
-        record('jsclick', locatorBuilders.buildAll(event.target), '')
+        record(m.cmd, locatorBuilders.buildAll(event.target), event.target.value)
       } else if (m.cmd === 'addStep') {
         record('addStep', [['']], '')
       } else if (customContextMenuItems.indexOf(m.cmd) > -1) {

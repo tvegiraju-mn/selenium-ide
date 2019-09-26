@@ -35,6 +35,14 @@ export default function seed(store, numberOfSuites = 0) {
         return url;
     }
     let url = getUrl(store);
+    browser.runtime.onMessage.addListener(function(message, sender, sendResponse) {
+        if (message.newUrl) {
+            url = message.newUrl
+            store.setUrl(url)
+            store.addUrl(url)
+            UiState.saved()
+        }
+    });
     store.setUrl(url)
     //store.addUrl(url)
 
