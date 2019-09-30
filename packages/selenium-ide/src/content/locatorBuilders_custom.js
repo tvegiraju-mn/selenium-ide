@@ -659,7 +659,7 @@ LocatorBuilders.prototype.getInnerTextWithoutChildren = function(node) {
 
 LocatorBuilders.prototype.getXpathOfAnElement = function(e, skipCases) {
   var elXpath = undefined;
-  if (LocatorBuilders.appType == 'MN' || LocatorBuilders.appType == 'Flex') {
+  if (LocatorBuilders.appType == 'MN' || LocatorBuilders.appType == 'Flex' || LocatorBuilders.appType == "BOB") {
     if (LocatorBuilders.appType == 'MN') {
       var comppath = e.getAttribute('comppath');
       if (comppath) {
@@ -768,7 +768,9 @@ LocatorBuilders.add('table', function table(e) {
     if (LocatorBuilders.appType == 'MN') {
       parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\')]';
       // or contains(@class,\'tableRow footerRow footerRow-\')
-    } else {
+    }else if (LocatorBuilders.appType == 'BOB'){
+        parXpath = elXpath + '/ancestor::div[contains(@class,\'header-collapse\')]//tr[@role=\'row\']';
+    }else {
       parXpath = elXpath + '/ancestor::div[contains(@id,\'tbl-container\')]'
     }
     var tdEl = this.findElement(parXpath);
