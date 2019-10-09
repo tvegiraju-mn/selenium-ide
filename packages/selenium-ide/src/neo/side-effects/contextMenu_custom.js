@@ -58,6 +58,12 @@ function createContextMenus() {
     documentUrlPatterns: ['<all_urls>'],
     contexts: ['all'],
   })
+  browser.contextMenus.create({
+    id: 'mouseOver',
+    title: 'Mouse Over',
+    documentUrlPatterns: ['<all_urls>'],
+    contexts: ['all'],
+  })
 }
 
 function destroyContextMenus() {

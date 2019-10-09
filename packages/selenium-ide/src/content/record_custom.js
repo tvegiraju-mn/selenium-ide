@@ -529,7 +529,7 @@ let nowNode = 0,
   mouseoverLocator,
   nodeInsertedLocator,
   nodeInsertedAttrChange
-Recorder.addEventHandler(
+/*Recorder.addEventHandler(
   'mouseOver',
   'mouseover',
   function(event) {
@@ -554,7 +554,7 @@ Recorder.addEventHandler(
     }
   },
   true
-)
+)*/
 // END
 
 let mouseoutLocator = undefined
@@ -589,7 +589,7 @@ Recorder.addMutationObserver(
   { childList: true }
 )
 
-Recorder.addMutationObserver(
+/*Recorder.addMutationObserver(
   'DOMNodeInserted',
   function(mutations) {
     if (
@@ -628,7 +628,7 @@ Recorder.addMutationObserver(
     }
   },
   { childList: true, subtree: true }
-)
+)*/
 
 // © Shuo-Heng Shih, SideeX Team
 let readyTimeOut = null
@@ -651,7 +651,7 @@ Recorder.addEventHandler(
 )
 // END
 
-let customContextMenuItems = ['jsclick', 'readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
+let customContextMenuItems = ['mouseOver', 'jsclick', 'readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
 let ignoreInnerTextDisplayNameForCommands = ['readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle']
 
 // © Ming-Hung Hsu, SideeX Team

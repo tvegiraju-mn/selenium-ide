@@ -197,6 +197,14 @@ if (window == window.top) {
   window.addEventListener('message', handler)
 }
 
+//remove contextmenu event handler for MN with SOF field
+{
+  if (document && document.eventHandlers && document.getElementsByName('SOF').length > 0) {
+    console.log('removing event handlers: ' + document.eventHandlers.contextmenu);
+    document.eventHandlers.contextmenu = new Array();
+  }
+}
+
 function handler(event) {
   if (
     event.source == window &&
