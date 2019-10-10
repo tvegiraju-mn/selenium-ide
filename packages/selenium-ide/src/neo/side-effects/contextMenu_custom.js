@@ -23,6 +23,12 @@ function createContextMenus() {
     contexts: ['all'],
   })
   browser.contextMenus.create({
+    id: 'mouseOver',
+    title: 'Mouse Over',
+    documentUrlPatterns: ['<all_urls>'],
+    contexts: ['all'],
+  })
+  browser.contextMenus.create({
     id: 'readDataFromUI',
     title: 'Read Data',
     documentUrlPatterns: ['<all_urls>'],
@@ -59,8 +65,8 @@ function createContextMenus() {
     contexts: ['all'],
   })
   browser.contextMenus.create({
-    id: 'mouseOver',
-    title: 'Mouse Over',
+    id: 'reactTableRowData',
+    title: 'Add to React Table Row Critieria',
     documentUrlPatterns: ['<all_urls>'],
     contexts: ['all'],
   })

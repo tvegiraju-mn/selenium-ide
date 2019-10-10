@@ -52,10 +52,10 @@ LocatorBuilders.prototype.build = function(e) {
 }
 
 LocatorBuilders.prototype.buildAll = function(el, ignoreInnerText) {
-  LocatorBuilders.recordedType = undefined;
-  LocatorBuilders.additionalData = undefined;
+  this.recordedType = undefined;
+  this.additionalData = undefined;
   let e = core.firefox.unwrap(el) //Samit: Fix: Do the magic to get it to work in Firefox 4
-  LocatorBuilders.displayName = this.getDisplayName(e, ignoreInnerText);
+  this.displayName = this.getDisplayName(e, ignoreInnerText);
   let locator
   let locators = []
   for (let i = 0; i < LocatorBuilders.order.length; i++) {
@@ -101,7 +101,6 @@ LocatorBuilders.prototype.findElement = function(loc) {
 LocatorBuilders.order = []
 LocatorBuilders.builderMap = {}
 LocatorBuilders._preferredOrder = []
-LocatorBuilders.appType = undefined
 // NOTE: for some reasons we does not use this part
 // classObservable(LocatorBuilders);
 
@@ -288,7 +287,7 @@ LocatorBuilders.add('css:data-attr', function cssDataAttr(e) {
 })
 
 LocatorBuilders.add('id', function id(e) {
-  if (e.id && (e.id.split(/\d+/).length == 1 || LocatorBuilders.appType != 'MN')) {
+  if (e.id && (e.id.split(/\d+/).length == 1 || this.appType != 'MN')) {
     return 'id=' + e.id
   }
   return null
@@ -308,7 +307,7 @@ LocatorBuilders.add('linkText', function linkText(e) {
 
 LocatorBuilders.add('name', function name(e) {
   if (e.name) {
-    if (LocatorBuilders.appType != 'MN')
+    if (this.appType != 'MN')
       return 'name=' + e.name
     var splitByNumber = e.name.split(/\d+/)
     if (splitByNumber.length == 1) {
@@ -384,7 +383,7 @@ LocatorBuilders.add('xpath:attributes', function xpathAttr(e) {
     'action',
     'onclick',
   ]
-  if (LocatorBuilders.appType == 'MN') {
+  if (this.appType == 'MN') {
     PREFERRED_ATTRIBUTES = [
       'comppath',
       'name',
@@ -536,6 +535,100 @@ LocatorBuilders.add('xpath:innerText', function xpathInnerText(el) {
   }
 })
 
+LocatorBuilders.prototype.buildReactTableRowData = function(e) {
+  try {
+    if (this.appType == 'BOB') {
+      //Table check
+      var closestTable = e.closest('table[id*=-body]');
+      var tableInModal = false;
+      if (closestTable == null || closestTable == undefined) {
+        closestTable = e.closest('table[class*=slds-table_fixed-layout]');
+        tableInModal = true;
+      }
+      if (closestTable == null || closestTable == undefined)
+        return undefined;
+      var tableClass = closestTable.getAttribute('class')
+      if (tableClass == null || tableClass == undefined || (tableClass != undefined && !tableClass.toLowerCase().includes('slds-table')))
+        return undefined;
+      var tableRowData = {};
+      var elementType = '', innerText = '', columnName = '', columnType = ''
+      if (tableInModal) {
+        var tdEl = e
+        if (e.nodeName.toLowerCase() != 'td') {
+          tdEl = e.closest('td[role=gridcell]')
+        }
+        var finalEl = tdEl.querySelectorAll('[id*=-content]')[0]
+        if (finalEl == undefined || finalEl == null) {
+          finalEl = tdEl.querySelectorAll('button')
+          elementType = 'BUTTON'
+          columnType = 'BLANK_INDEX'
+        } else {
+          innerText = finalEl.textContent.trim()
+          var tdIdx = Array.prototype.slice.call(tdEl.parentNode.children).indexOf(tdEl)
+          var theadRow = closestTable.querySelectorAll('thead')[0].children[0]
+          var reqTableHead = theadRow.children[tdIdx]
+          columnName = reqTableHead.querySelectorAll('span[id*=-text][class*=slds-truncate]')[0].textContent.trim()
+          elementType = 'PLAIN_TEXT'
+          columnType = 'HEADER_NAME'
+        }
+      } else {
+        //if event in td element itself && not stacked
+        if (e.nodeName.toLowerCase() == 'td' && e.children.length != 1)
+          return undefined;
+        var divEl = e.closest('div[class=slds-truncate]')
+        if (e.nodeName.toLowerCase() == 'td' && (divEl == null || divEl == undefined))
+          divEl = e.querySelectorAll('div[class=slds-truncate]')[0]
+        if (divEl == null || divEl == undefined) {
+          var tdEl = e.closest('td[role=gridcell]')
+          if (tdEl) {
+            var checkBoxEl = tdEl.querySelectorAll('input[type=checkbox]')
+            var buttonEl = tdEl.querySelectorAll('button')
+            if (checkBoxEl && checkBoxEl[0]) {
+              elementType = 'OTHER'
+              columnType = 'CHECKBOX_INDEX'
+              var isChecked = checkBoxEl[0].getAttribute('checked') || checkBoxEl[0].getAttribute('checked') == 'true'
+              innerText = isChecked ? 'on' : 'off';
+            }
+          }
+        } else {
+          columnType = 'HEADER_NAME'
+          var tdEl = divEl.parentNode;
+          var tdIdx = Array.prototype.slice.call(tdEl.parentNode.children).indexOf(tdEl)
+          var divIdx = Array.prototype.slice.call(divEl.parentNode.children).indexOf(divEl)
+          var finalEl = divEl.querySelectorAll('[id*=-content]')[0];
+          var nodeName = finalEl.nodeName.toLowerCase();
+          if (finalEl.querySelectorAll('button').length > 0)
+            elementType = 'BUTTON'
+          else if (finalEl.querySelectorAll('use').length > 0)
+            elementType = 'IMAGE'
+          else if (nodeName == 'a') {
+            elementType = 'LINK'
+            innerText = finalEl.textContent.trim()
+          } else if ((nodeName == 'input' && eType != 'hidden') || nodeName == 'select')
+            elementType = 'OTHER'
+          else {
+            elementType = 'PLAIN_TEXT'
+            innerText = finalEl.textContent.trim()
+          }
+          var theadRow = closestTable.querySelectorAll('thead[class=data_table_head]')[0].children[0]
+          var reqTableHead = theadRow.children[tdIdx]
+          var reqDiv = reqTableHead.querySelectorAll('div[id*=-body]')[divIdx]
+          columnName = reqDiv.querySelectorAll('[class=slds-truncate]')[0].textContent.trim()
+        }
+      }
+      tableRowData.elementType = elementType
+      tableRowData.columnType = columnType
+      tableRowData.expectedValue = innerText
+      tableRowData.columnName = columnName
+      console.log(JSON.stringify(tableRowData))
+      return tableRowData;
+    }
+  } catch(e) {
+    console.error(e)
+  }
+  return undefined;
+}
+
 LocatorBuilders.prototype.getDisplayName = function(e, ignoreInnerText) {
   if (e.innerText && ignoreInnerText != true) {
     var innerText = this.getInnerTextWithoutChildren(e);
@@ -560,7 +653,7 @@ LocatorBuilders.prototype.getDisplayName = function(e, ignoreInnerText) {
       }
     }
   }
-  if (LocatorBuilders.appType == 'MN') {
+  if (this.appType == 'MN') {
     var elXpath = this.getXpathOfAnElement(e, false);
     if (elXpath) {
       var labelXpath = elXpath + '/preceding::*[((local-name() = \'span\' and contains(@domattr,\'extField\')) or (local-name() = \'label\' and contains(@class,\'left\'))) and string-length(normalize-space(text())) > 1][1]';
@@ -579,8 +672,8 @@ LocatorBuilders.prototype.logging = function(message) {
     browser.runtime.sendMessage({type: "bglog", payload: message});
 }
 
-LocatorBuilders.setPreferredOrderByAppType = function(appType) {
-  LocatorBuilders.appType = appType;
+LocatorBuilders.prototype.setPreferredOrderByAppType = function(appType) {
+  this.appType = appType;
   if (appType == 'MN')
     LocatorBuilders.setPreferredOrder('leftNav,table,xpath:comppath,xpath:comppathRelative,xpath:attributes,xpath:link,linkText,name,' +
         'xpath:innerText,xpath:img,id,xpath:idRelative,xpath:href,xpath:position,css:data-attr');
@@ -593,23 +686,24 @@ LocatorBuilders.setPreferredOrderByAppType = function(appType) {
   else
     LocatorBuilders.setPreferredOrder('id,linkText,name,css:data-attr,xpath:link,xpath:img,xpath:attributes,xpath:idRelative,' +
         'xpath:href,xpath:position,xpath:innerText,table,leftNav,xpath:comppath,xpath:comppathRelative');
-  console.log('Updated order for App Type: ' + LocatorBuilders.appType);
+  console.log('Updated order for App Type: ' + this.appType);
 }
 
-LocatorBuilders.setPreferredOrderByAppTypeFirstTime = function() {
+LocatorBuilders.prototype.setPreferredOrderByAppTypeFirstTime = function() {
+  var self = this;
   function getAppType() {
     let appType = undefined;
     browser.runtime.sendMessage({type: "getAppType"}).then(function(response) {
       if (response && response.appType) {
         appType = response.appType;
-        LocatorBuilders.setPreferredOrderByAppType(appType);
-        console.log('Updated First time order for App Type: ' + LocatorBuilders.appType);
+        self.setPreferredOrderByAppType(appType);
+        console.log('Updated First time order for App Type: ' + self.appType);
       }
     });
     return appType;
   }
   let appType = getAppType();
-  LocatorBuilders.setPreferredOrderByAppType(appType);
+  self.setPreferredOrderByAppType(appType);
 }
 
 LocatorBuilders.prototype.isElementUniqueWithXPath = function(xpath, e) {
@@ -659,8 +753,8 @@ LocatorBuilders.prototype.getInnerTextWithoutChildren = function(node) {
 
 LocatorBuilders.prototype.getXpathOfAnElement = function(e, skipCases) {
   var elXpath = undefined;
-  if (LocatorBuilders.appType == 'MN' || LocatorBuilders.appType == 'Flex' || LocatorBuilders.appType == "BOB") {
-    if (LocatorBuilders.appType == 'MN') {
+  if (this.appType == 'MN' || this.appType == 'Flex' || this.appType == "BOB") {
+    if (this.appType == 'MN') {
       var comppath = e.getAttribute('comppath');
       if (comppath) {
         if (comppath.indexOf('spreadsheetContainer') > -1 && skipCases)
@@ -670,7 +764,7 @@ LocatorBuilders.prototype.getXpathOfAnElement = function(e, skipCases) {
         return elXpath;
       }
     }
-    if (LocatorBuilders.appType == 'Flex' && e.getAttribute('title')) {
+    if (this.appType == 'Flex' && e.getAttribute('title')) {
       elXpath = '//' + this.xpathHtmlElement(e.nodeName.toLowerCase()) + '[@title=' + this.attributeValue(e.getAttribute('title')) + ']';
       if (e == this.findElement('xpath=' + elXpath)) {
         return elXpath;
@@ -697,7 +791,7 @@ LocatorBuilders.prototype.getXpathOfAnElement = function(e, skipCases) {
 }
 
 LocatorBuilders.add('leftNav', function leftNav(e) {
-  if (LocatorBuilders.appType == 'MN') {
+  if (this.appType == 'MN') {
     var current = e;
     if (current.parentNode != null) {
       var parentNode = current.parentNode;
@@ -741,18 +835,18 @@ LocatorBuilders.add('leftNav', function leftNav(e) {
           }
         }
         if (this.isElementUniqueWithXPath('//' + elXpath, e)) {
-          if (dynamicLinks.length >= 2 && !LocatorBuilders.recordedType) {
-            LocatorBuilders.recordedType = 'leftNav';
+          if (dynamicLinks.length >= 2 && !this.recordedType) {
+            this.recordedType = 'leftNav';
             var navLinks = '';
             //Ignore last element
             for (var k = 0 ; k < dynamicLinks.length - 1; k++) {
               navLinks = dynamicLinks[k] + (navLinks == '' ? '' : '->' + navLinks);
             }
-            LocatorBuilders.additionalData = 'navLinks=' + navLinks;
-            this.logging('From leftNav: ' + LocatorBuilders.additionalData);
+            this.additionalData = 'navLinks=' + navLinks;
+            this.logging('From leftNav: ' + this.additionalData);
           }
-          if (displayName && !LocatorBuilders.displayName)
-            LocatorBuilders.displayName = displayName;
+          if (displayName && !this.displayName)
+            this.displayName = displayName;
           return "xpath=//" + elXpath;
         }
       }
@@ -762,15 +856,28 @@ LocatorBuilders.add('leftNav', function leftNav(e) {
 })
 
 LocatorBuilders.add('table', function table(e) {
+  if (this.appType == 'BOB') {
+    var tableRowData = this.buildReactTableRowData(e);
+    if (tableRowData) {
+      if (!this.recordedType) {
+        this.recordedType = 'table';
+        this.additionalData = 'rowType=data|elementType=' + tableRowData.elementType + '|columnName=' + tableRowData.columnName + '|columnType=' + tableRowData.columnType;
+        this.displayName = undefined;
+      }
+      var id = (tableRowData.columnName && tableRowData.columnName != '' ? tableRowData.columnName : undefined)
+      if (!id)
+        id = e.id ? e.id : (e.name ? e.name : e.getAttribute('data-id'));
+      return 'table=' + id;
+    }
+    return undefined;
+  }
   var elXpath = this.getXpathOfAnElement(e, true);
   if (elXpath) {
     var parXpath = '';
-    if (LocatorBuilders.appType == 'MN') {
+    if (this.appType == 'MN') {
       parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\')]';
       // or contains(@class,\'tableRow footerRow footerRow-\')
-    }else if (LocatorBuilders.appType == 'BOB'){
-        parXpath = elXpath + '/ancestor::div[contains(@class,\'header-collapse\')]//tr[@role=\'row\']';
-    }else {
+    } else {
       parXpath = elXpath + '/ancestor::div[contains(@id,\'tbl-container\')]'
     }
     var tdEl = this.findElement(parXpath);
@@ -795,10 +902,10 @@ LocatorBuilders.add('table', function table(e) {
         elementType = 'BUTTON'
       else if (nodeName == 'img')
         elementType = 'IMAGE'
-      if (!LocatorBuilders.recordedType) {
-        LocatorBuilders.recordedType = 'table';
-        LocatorBuilders.additionalData = 'rowType=' + rowType + '|elementType=' + elementType;
-        LocatorBuilders.displayName = undefined;
+      if (!this.recordedType) {
+        this.recordedType = 'table';
+        this.additionalData = 'rowType=' + rowType + '|elementType=' + elementType;
+        this.displayName = undefined;
       }
       return 'table=' + elXpath;
     }
@@ -856,8 +963,8 @@ LocatorBuilders.add('xpath:comppathRelative', function xpathComppathRelative(e) 
             //this.logging('inside xpath:comppathRelative: ' + locator);
             if (this.isElementUniqueWithXPath(locator, current.parentNode)) {
               if (current.parentNode.nodeName.toLowerCase() == 'a') {
-                LocatorBuilders.displayName = (current.parentNode.innerText && current.parentNode.innerText.trim().length > 1) ? current.parentNode.innerText.trim() :
-                    (LocatorBuilders.displayName ? LocatorBuilders.displayName : this.getDisplayName(current.parentNode));
+                this.displayName = (current.parentNode.innerText && current.parentNode.innerText.trim().length > 1) ? current.parentNode.innerText.trim() :
+                    (this.displayName ? this.displayName : this.getDisplayName(current.parentNode));
                 return 'xpath=' + locator;
               }
               return 'xpath=' + locator + path;
@@ -871,4 +978,4 @@ LocatorBuilders.add('xpath:comppathRelative', function xpathComppathRelative(e) 
   return null;
 })
 
-LocatorBuilders.setPreferredOrderByAppTypeFirstTime()
+LocatorBuilders.prototype.setPreferredOrderByAppTypeFirstTime()

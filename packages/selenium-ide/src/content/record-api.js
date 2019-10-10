@@ -17,7 +17,6 @@
 
 import browser from 'webextension-polyfill'
 import { calculateFrameIndex } from './utils'
-import LocatorBuilders from './locatorBuilders_custom'
 
 let contentSideexTabId = -1
 let frameLocation = ''
@@ -164,13 +163,6 @@ function attachRecorderHandler(message, _sender, sendResponse) {
   }
 }
 
-function updateAppTypeHandler(message, _sender, sendResponse) {
-  if (message.updateAppType) {
-    LocatorBuilders.setPreferredOrderByAppType(message.appType)
-    sendResponse(true)
-  }
-}
-
 function detachRecorderHandler(message, _sender, sendResponse) {
   if (message.detachRecorder) {
     recorder.detach()
@@ -182,7 +174,6 @@ const recorder = new Recorder(window)
 
 // recorder event handlers
 browser.runtime.onMessage.addListener(attachRecorderHandler)
-browser.runtime.onMessage.addListener(updateAppTypeHandler)
 browser.runtime.onMessage.addListener(detachRecorderHandler)
 
 function addRecordingIndicator() {
@@ -332,22 +323,26 @@ export function record(
   value,
   insertBeforeLastCommand,
   actualFrameLocation
+  ,comment,
+  recordedType,
+  additionalData
 ) {
   browser.runtime
     .sendMessage({
       command: command,
       target: target,
       value: value,
-      comment: LocatorBuilders.displayName,
-      recordedType: LocatorBuilders.recordedType,
-      additionalData: LocatorBuilders.additionalData,
+      comment: comment,
+      recordedType: recordedType,
+      additionalData: additionalData,
       insertBeforeLastCommand: insertBeforeLastCommand,
       frameLocation:
         actualFrameLocation != undefined ? actualFrameLocation : frameLocation,
       commandSideexTabId: contentSideexTabId,
     })
-    .catch(() => {
-      recorder.detach()
+    .catch((e) => {
+      //console.error(e)
+      //recorder.detach()
     })
 }
 

@@ -38,6 +38,7 @@ const actionCommentMap = {
 const actionsReqDetails = ['readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues'];
 var ignoreTableDetailsForActions = ['ComparisonOfTwoValues', 'performWait']
 var appType = undefined
+var reactTableRowData = undefined
 //var tableData = undefined
 
 function getSelectedCase() {
@@ -436,6 +437,24 @@ export default class BackgroundRecorder {
     } else if (message.command.includes('addStep')) {
       this.getInputFromUserAndRecord(message, sender, 'Enter the name of the Step')
       return
+    } else if (message.command == 'reactTableRowData') {
+      var indicatorMessage = ''
+      if (message.target) {
+        if (!reactTableRowData) {
+          reactTableRowData = []
+        }
+        reactTableRowData.push(message.target)
+        indicatorMessage = 'criteria added for table row identification'
+      } else {
+        indicatorMessage = 'row criteria not registered as it is not supported on this.'
+      }
+      this.sendRecordNotification(
+          sender.tab.id,
+          indicatorMessage,
+          message.target,
+          message.value
+      )
+      return
     }
 
     //handle choose ok/cancel confirm
@@ -455,11 +474,23 @@ export default class BackgroundRecorder {
     var recCommand = UiState.lastRecordedCommand;
     if (!recCommand) return;
     var self = this;
+    var isUserClicksOnCancel = function(response) {
+      if (response.data.removeLastCommand) {
+        //Remove last recorded command && resume recording
+        UiState.displayedTest.removeCommand(recCommand)
+        self.startRecording();
+        return true;
+      }
+      return false;
+    }
     var getResponseFromWebApp = function() {
       if (actionsReqDetails.indexOf(message.command) > -1) {
         self.stopRecording();
         var dataInputToWebapp = {modalType: message.command, data: { comment : message.comment}};
         var callbackFn = function(response) {
+          if (isUserClicksOnCancel(response)) {
+            return;
+          }
           recCommand.setOtherData(response.data);
           if (ignoreTableDetailsForActions.indexOf(message.command) > -1) {
             var newTarget = message.target && message.target[1] ? message.target[1][0] : message.target[0][0];
@@ -478,6 +509,11 @@ export default class BackgroundRecorder {
         var rowType = rowAttrs[1];
         var typeAttrs = attrValues[1].split('=')
         var elementType = typeAttrs[1];
+        var columnType = undefined, columnName = undefined
+        if (attrValues.length > 2) {
+          columnName = attrValues[2].split('=')[1]
+          columnType = attrValues[3].split('=')[1]
+        }
         /*browser.windows.update(this.windowSession.ideWindowId, { focused: true })
             .then(() => {setTimeout(() => {
                 recCommand.setHasTableInput(true);
@@ -485,7 +521,22 @@ export default class BackgroundRecorder {
                 ModalState.toggleTableInputConfig();
                 recCommand.toggleOpensTableInput();
               }, 100)});*/
-        var newTableData = [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType}]}]
+        var newTableData = [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType, columnType : columnType, columnName : columnName}]}]
+        if (reactTableRowData && reactTableRowData.length > 0) {
+          newTableData[0].SelectRow[0]['ColumnIdentifier'] = JSON.parse(JSON.stringify(reactTableRowData));
+          var uniqColName = columnName;
+          if (!uniqColName) {
+            for (var idx in reactTableRowData) {
+              var colIdData = reactTableRowData[idx]
+              if (colIdData.columnName != undefined && colIdData.columnName != '') {
+                uniqColName = colIdData.columnName
+                break
+              }
+            }
+          }
+          newTableData[0].columnName = uniqColName;
+          reactTableRowData = undefined;
+        }
         /*if (tableData) {
           newTableData = JSON.parse(JSON.stringify(tableData))
           newTableData[0].SelectRow[0].rowType = rowType
@@ -493,6 +544,10 @@ export default class BackgroundRecorder {
         }*/
         var selectTableData = {modalType: 'SelectTable', data: newTableData};
         var callbackFn = function(response) {
+          //If user click on cancel in table view
+          if (isUserClicksOnCancel(response)) {
+            return;
+          }
           recCommand.setTableInput(response.data)
           //tableData = response.data
           var newComm = (response.data[0] && response.data[0].SelectColumn && response.data[0].SelectColumn[0] && response.data[0].SelectColumn[0].columnName ? response.data[0].SelectColumn[0].columnName : '')
@@ -513,8 +568,10 @@ export default class BackgroundRecorder {
         recCommand.setOtherData(otherData) ;
       }
     }
-    if (message.recordedType != 'table' || ignoreTableDetailsForActions.indexOf(message.command) > -1)
+    if (message.recordedType != 'table' || ignoreTableDetailsForActions.indexOf(message.command) > -1) {
+      reactTableRowData = undefined;
       getResponseFromWebApp();
+    }
   }
 
   startRecording() {
