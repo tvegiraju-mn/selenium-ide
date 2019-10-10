@@ -864,7 +864,7 @@ LocatorBuilders.add('table', function table(e) {
         this.additionalData = 'rowType=data|elementType=' + tableRowData.elementType + '|columnName=' + tableRowData.columnName + '|columnType=' + tableRowData.columnType;
         this.displayName = undefined;
       }
-      var id = (tableRowData.columnName && tableRowData.columnName != '' ? tableRowData.columnName : undefined)
+      var id = (tableRowData.columnName && tableRowData.columnName != '' ? tableRowData.columnName : (tableRowData.columnType != '' ? tableRowData.columnType : undefined))
       if (!id)
         id = e.id ? e.id : (e.name ? e.name : e.getAttribute('data-id'));
       return 'table=' + id;

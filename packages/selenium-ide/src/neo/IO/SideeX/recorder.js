@@ -550,7 +550,11 @@ export default class BackgroundRecorder {
           }
           recCommand.setTableInput(response.data)
           //tableData = response.data
-          var newComm = (response.data[0] && response.data[0].SelectColumn && response.data[0].SelectColumn[0] && response.data[0].SelectColumn[0].columnName ? response.data[0].SelectColumn[0].columnName : '')
+          var newComm = ''
+          if (response.data[0] && response.data[0].SelectColumn && response.data[0].SelectColumn[0] && response.data[0].SelectColumn[0]) {
+            var colData = response.data[0].SelectColumn[0];
+            newComm = (colData.columnName && colData.columnName != '' ? colData.columnName : (colData.columnType && colData.columnType != '' ? colData.columnType : ''))
+          }
           if (newComm != '') {
             newComm = (message.comment ? message.comment + ' in ' + newComm + ' column' : newComm + ' column')
             self.updateCommentInRecordedCommand(message.command, newComm)
