@@ -213,9 +213,12 @@ LocatorBuilders.prototype.attributeValue = function(value) {
 }
 
 LocatorBuilders.prototype.xpathHtmlElement = function(name) {
+  let specialCaseTagNames = ['svg', 'use'];
   if (this.window.document.contentType == 'application/xhtml+xml') {
     // "x:" prefix is required when testing XHTML pages
     return 'x:' + name
+  } else if (specialCaseTagNames.indexOf(name) > -1){
+    return '*[local-name()=\''+name+'\']'
   } else {
     return name
   }
@@ -681,7 +684,7 @@ LocatorBuilders.prototype.setPreferredOrderByAppType = function(appType) {
     LocatorBuilders.setPreferredOrder('table,xpath:attributes,name,id,xpath:link,xpath:idRelative,xpath:innerText,linkText,' +
         'xpath:img,xpath:href,xpath:position,css:data-attr,leftNav,xpath:comppath,xpath:comppathRelative');
   else if (appType == 'BOB')
-    LocatorBuilders.setPreferredOrder('table,id,linkText,name,css:data-attr,xpath:link,xpath:img,xpath:attributes,xpath:idRelative,' +
+    LocatorBuilders.setPreferredOrder('table,id,linkText,name,css:data-attr,xpath:link,xpath:img,xpath:idRelative,xpath:attributes,' +
         'xpath:href,xpath:position,xpath:innerText,leftNav,xpath:comppath,xpath:comppathRelative');
   else
     LocatorBuilders.setPreferredOrder('id,linkText,name,css:data-attr,xpath:link,xpath:img,xpath:attributes,xpath:idRelative,' +

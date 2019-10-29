@@ -199,7 +199,7 @@ function addRecordingIndicator() {
         event.target.style.visibility = 'hidden'
         setTimeout(function() {
           event.target.style.visibility = 'visible'
-        }, 1000)
+        }, 2000)
       },
       false
     )
