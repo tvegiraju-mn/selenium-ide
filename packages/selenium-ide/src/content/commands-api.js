@@ -19,7 +19,7 @@ import './closure-polyfill'
 import TargetSelector from './targetSelector'
 import Selenium from './selenium-api'
 import BrowserBot from './selenium-browserbot'
-import LocatorBuilders from './locatorBuilders'
+import LocatorBuilders from './locatorBuilders_custom'
 import { editRegion, removeRegion } from './region'
 import { attach } from './prompt-injector'
 

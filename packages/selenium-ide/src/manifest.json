@@ -31,7 +31,10 @@
     "debugger",
     "<all_urls>"
   ],
+  "update_url": "http://0.0.0.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0bFUyoEPsjzRslrYrWDSbRVp2enZ5HrgNkmD+rIKSAvhBRj1bM5pF10VwBm+OpOz12xf784bleKr3NcpzN7vvistxIhROixKH4w7VjI0nZShf36SBbBpc52lUlKGyXzxMIlyAFZ2oki7hLvxtbanwZ6Lqj5Ceo0rK5dTW+PxWFnIaP8Oy/gdTfh2YWhWYdBUSJbuNaKxL7b65q5HCUFPrKgFHGTiQl3TkAkUcWN32aExVnUcxYb3H0u9Qx0bDTRh8i9nQbcYe4zHfcu3ftAVNlcffgCpa0/6cA8saBYRDNlZeEV43EcI8YpoHaECpw9NdzKFUeShQBT3BzsmEL96KQIDAQAB",
   "externally_connectable": {
+    "matches": ["*://*.modeln.com:*/*"],
     "ids": [
       "*"
     ]

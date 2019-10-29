@@ -17,10 +17,29 @@
 
 import browser from 'webextension-polyfill'
 import UiState from '../../stores/view/UiState'
+import ModalState from '../../stores/view/ModalState'
+import { focusRecordingWindow } from '../../IO/SideeX/find-select'
 import record, { recordOpensWindow } from './record'
 import { Logger, Channels } from '../../stores/view/Logs'
 
 const logger = new Logger(Channels.PLAYBACK)
+const actionCommentMap = {
+  'click' : 'Click on',
+  'type' : 'Entering',
+  'select' : 'Selecting',
+  'readDataFromUI' : 'Reading',
+  'readElementAttribute' : 'Reading Attribute',
+  'readElementStyle' : 'Reading Style',
+  'readElementPresence' : 'Reading Presence',
+  'checkbox': 'Check/Uncheck',
+  'performWait' : 'Wait on',
+  'jsclick' : 'Click on'
+}
+const actionsReqDetails = ['readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues'];
+var ignoreTableDetailsForActions = ['ComparisonOfTwoValues', 'performWait']
+var appType = undefined
+var reactTableRowData = undefined
+//var tableData = undefined
 
 function getSelectedCase() {
   return {
@@ -46,11 +65,13 @@ export default class BackgroundRecorder {
     if (browser && browser.runtime && browser.runtime.onMessage) {
       browser.runtime.onMessage.addListener(this.attachRecorderRequestHandler)
       browser.runtime.onMessage.addListener(this.frameCountHandler)
+      browser.runtime.onMessage.addListener(this.initRecordingMessageHandler)
     }
   }
 
   async attachToTab(tabId) {
     await browser.tabs.sendMessage(tabId, { attachRecorder: true })
+    await browser.tabs.sendMessage(tabId, { updateAppType: true, appType: appType })
   }
 
   async detachFromTab(tabId) {
@@ -377,14 +398,14 @@ export default class BackgroundRecorder {
         message.frameLocation
     }
     if (
-      message.command.includes('Value') &&
+      message.command.includes('Value') && actionsReqDetails.indexOf(message.command) == -1 &&
       typeof message.value === 'undefined'
     ) {
       logger.error(
         "This element does not have property 'value'. Please change to use storeText command."
       )
       return
-    } else if (message.command.includes('Text') && message.value === '') {
+    } else if (message.command.includes('Text') && actionsReqDetails.indexOf(message.command) == -1 && message.value === '') {
       logger.error(
         "This element does not have property 'Text'. Please change to use storeValue command."
       )
@@ -413,6 +434,27 @@ export default class BackgroundRecorder {
           }, 100)
         })
       return
+    } else if (message.command.includes('addStep')) {
+      this.getInputFromUserAndRecord(message, sender, 'Enter the name of the Step')
+      return
+    } else if (message.command == 'reactTableRowData') {
+      var indicatorMessage = ''
+      if (message.target) {
+        if (!reactTableRowData) {
+          reactTableRowData = []
+        }
+        reactTableRowData.push(message.target)
+        indicatorMessage = 'criteria added for table row identification'
+      } else {
+        indicatorMessage = 'row criteria not registered as it is not supported on this.'
+      }
+      this.sendRecordNotification(
+          sender.tab.id,
+          indicatorMessage,
+          message.target,
+          message.value
+      )
+      return
     }
 
     //handle choose ok/cancel confirm
@@ -427,6 +469,209 @@ export default class BackgroundRecorder {
       )
       record(message.command, message.target, message.value)
     }
+    this.updateCommentInRecordedCommand(message.command, message.comment);
+    //if the element is inside table
+    var recCommand = UiState.lastRecordedCommand;
+    if (!recCommand) return;
+    var self = this;
+    var isUserClicksOnCancel = function(response) {
+      if (response.data.removeLastCommand) {
+        //Remove last recorded command && resume recording
+        UiState.displayedTest.removeCommand(recCommand)
+        self.startRecording();
+        return true;
+      }
+      return false;
+    }
+    var getResponseFromWebApp = function() {
+      if (actionsReqDetails.indexOf(message.command) > -1) {
+        self.stopRecording();
+        var dataInputToWebapp = {modalType: message.command, data: { comment : message.comment}};
+        var callbackFn = function(response) {
+          if (isUserClicksOnCancel(response)) {
+            return;
+          }
+          recCommand.setOtherData(response.data);
+          if (ignoreTableDetailsForActions.indexOf(message.command) > -1) {
+            var newTarget = message.target && message.target[1] ? message.target[1][0] : message.target[0][0];
+            recCommand.setTarget(newTarget);
+          }
+          self.startRecording();
+        }
+        self.updateDataFromWebAppInRecCommand(dataInputToWebapp, callbackFn, true);
+      } else
+        self.startRecording();
+    }
+    if (message.recordedType) {
+      if (message.recordedType == 'table' && ignoreTableDetailsForActions.indexOf(message.command) == -1) {
+        var attrValues = message.additionalData.split('|');
+        var rowAttrs = attrValues[0].split('=')
+        var rowType = rowAttrs[1];
+        var typeAttrs = attrValues[1].split('=')
+        var elementType = typeAttrs[1];
+        var columnType = undefined, columnName = undefined
+        if (attrValues.length > 2) {
+          columnName = attrValues[2].split('=')[1]
+          columnType = attrValues[3].split('=')[1]
+        }
+        /*browser.windows.update(this.windowSession.ideWindowId, { focused: true })
+            .then(() => {setTimeout(() => {
+                recCommand.setHasTableInput(true);
+                recCommand.setTableInput({'SelectRow': {'rowType' : rowType}, 'SelectColumn': {'elementType' : elementType}});
+                ModalState.toggleTableInputConfig();
+                recCommand.toggleOpensTableInput();
+              }, 100)});*/
+        var newTableData = [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType, columnType : columnType, columnName : columnName}]}]
+        if (reactTableRowData && reactTableRowData.length > 0) {
+          newTableData[0].SelectRow[0]['ColumnIdentifier'] = JSON.parse(JSON.stringify(reactTableRowData));
+          var uniqColName = columnName;
+          if (!uniqColName) {
+            for (var idx in reactTableRowData) {
+              var colIdData = reactTableRowData[idx]
+              if (colIdData.columnName != undefined && colIdData.columnName != '') {
+                uniqColName = colIdData.columnName
+                break
+              }
+            }
+          }
+          newTableData[0].columnName = uniqColName;
+          reactTableRowData = undefined;
+        }
+        /*if (tableData) {
+          newTableData = JSON.parse(JSON.stringify(tableData))
+          newTableData[0].SelectRow[0].rowType = rowType
+          newTableData[0].SelectColumn[0].elementType = elementType
+        }*/
+        var selectTableData = {modalType: 'SelectTable', data: newTableData};
+        var callbackFn = function(response) {
+          //If user click on cancel in table view
+          if (isUserClicksOnCancel(response)) {
+            return;
+          }
+          recCommand.setTableInput(response.data)
+          //tableData = response.data
+          var newComm = ''
+          if (response.data[0] && response.data[0].SelectColumn && response.data[0].SelectColumn[0] && response.data[0].SelectColumn[0]) {
+            var colData = response.data[0].SelectColumn[0];
+            newComm = (colData.columnName && colData.columnName != '' ? colData.columnName : (colData.columnType && colData.columnType != '' ? colData.columnType : ''))
+          }
+          if (newComm != '') {
+            newComm = (message.comment ? message.comment + ' in ' + newComm + ' column' : newComm + ' column')
+            self.updateCommentInRecordedCommand(message.command, newComm)
+          }
+          getResponseFromWebApp();
+        }
+        self.stopRecording();
+        this.updateDataFromWebAppInRecCommand(selectTableData, callbackFn, actionsReqDetails.indexOf(message.command) > -1);
+      } else if (message.recordedType == 'leftNav') {
+        recCommand.setIsLeftNav('true');
+        var attrValues = message.additionalData.split('=');
+        var otherData = recCommand.otherData;
+        if (!otherData) otherData = {};
+        otherData.navLinks = attrValues[1];
+        recCommand.setOtherData(otherData) ;
+      }
+    }
+    if (message.recordedType != 'table' || ignoreTableDetailsForActions.indexOf(message.command) > -1) {
+      reactTableRowData = undefined;
+      getResponseFromWebApp();
+    }
+  }
+
+  startRecording() {
+    if (!UiState.isRecording)
+      UiState.toggleRecord();
+}
+
+  stopRecording() {
+    if (UiState.isRecording)
+      UiState.toggleRecord();
+  }
+
+  initRecordingMessageHandler(message, sender, sendResponse) {
+    if (message.initRecording) {
+      //First stopping the recording
+      this.stopRecording();
+      appType = message.appType;
+      if (message.clearAllCommands)
+        UiState.displayedTest.clearAllCommands();
+      this.startRecording();
+    }
+  }
+
+  updateDataFromWebAppInRecCommand(data, callbackFn, noToggling) {
+    var self = this;
+    if (!noToggling)
+      self.stopRecording();
+    browser.runtime.sendMessage({type: 'showModal', payload: data}).then(function(response) {
+      callbackFn(response);
+      if (!noToggling)
+        self.startRecording();
+    });
+  }
+
+  updateCommentInRecordedCommand(command, comment) {
+    var recCommand = UiState.lastRecordedCommand;
+    if (comment && recCommand) {
+      recCommand.setComment((actionCommentMap[command] ? actionCommentMap[command] : command) + ' ' + comment.replace(':', ''));
+    }
+  }
+
+  getInputFromUserAndRecord(message, sender, promptMsg) {
+    if (message.recordedType) {
+      //if recorded Type is set, it may be from Table or left navs
+      //Ignore reading variable in case of table as that will be generated based on user input
+      return;
+    }
+    UiState.toggleRecord();
+    /*var self = this;
+    browser.runtime.sendMessage({type: 'showModal', payload: 'Hello There...'}).then(function(response) {
+      message.value = response.data.aliasName;
+      if (message.insertBeforeLastCommand) {
+        record(message.command, message.target, message.value, true)
+      } else {
+        self.sendRecordNotification(
+            sender.tab.id,
+            message.command,
+            message.target,
+            message.value
+        )
+        record(message.command, message.target, message.value);
+        self.updateCommentInRecordedCommand(message.command, message.comment);
+      }
+      UiState.toggleRecord();
+      //focusRecordingWindow();
+    });*/
+    /*if (message.comment) {
+      record(message.command, message.target, message.comment.replace(/[^a-zA-Z0-9_]/ig, ''));
+      this.updateCommentInRecordedCommand(message.command, message.comment);
+      return;
+    }*/
+    // In Google Chrome, window.prompt() must be triggered in
+    // an actived tabs of front window, so we let panel window been focused
+    browser.windows
+        .update(this.windowSession.ideWindowId, { focused: true })
+        .then(() => {
+          // Even if window has been focused, window.prompt() still failed.
+          // Delay a little time to ensure that status has been updated
+          setTimeout(() => {
+            message.value = prompt(promptMsg)
+            if (message.insertBeforeLastCommand) {
+              record(message.command, message.target, message.value, true)
+            } else {
+              this.sendRecordNotification(
+                  sender.tab.id,
+                  message.command,
+                  message.target,
+                  message.value
+              )
+              record(message.command, message.target, message.value);
+              this.updateCommentInRecordedCommand(message.command, message.comment);
+            }
+            UiState.toggleRecord();
+            //focusRecordingWindow();
+          }, 100)
+        })
   }
 
   sendRecordNotification(tabId, command, target, value) {
@@ -469,6 +714,7 @@ export default class BackgroundRecorder {
     this.attachRecorderRequestHandler = this.attachRecorderRequestHandler.bind(
       this
     )
+    this.initRecordingMessageHandler = this.initRecordingMessageHandler.bind(this)
     this.frameCountHandler = this.frameCountHandler.bind(this)
   }
 

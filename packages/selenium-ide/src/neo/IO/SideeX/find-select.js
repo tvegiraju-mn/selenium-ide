@@ -38,6 +38,17 @@ async function getActiveTabForTest() {
   return tabs[0]
 }
 
+export async function focusRecordingWindow() {
+  try {
+    const tab = await getActiveTabForTest()
+    await browser.windows.update(tab.windowId, {
+      focused: true,
+    })
+  } catch (e) {
+    showNoTabAvailableDialog()
+  }
+}
+
 export async function find(target) {
   try {
     const xlatedTarget = xlateArgument(target, PlaybackState.variables)

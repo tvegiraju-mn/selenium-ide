@@ -19,7 +19,7 @@ var handleMessage = (function() {
       content.style.color = '#114990'
       circle.style.animation = 'none'
       circle.style.visibility = 'hidden'
-      lastTimeoutHandle = setTimeout(resetContent, 1000)
+      lastTimeoutHandle = setTimeout(resetContent, 2000)
     }
   }
 })()

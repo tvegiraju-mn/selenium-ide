@@ -18,7 +18,7 @@
 import { action, computed, observable, toJS } from 'mobx'
 import uuidv4 from 'uuid/v4'
 import Fuse from 'fuse.js'
-import { Commands as _Commands, TargetTypes } from './Commands'
+import { Commands as _Commands, TargetTypes } from './Commands_custom'
 import { ArgTypes as _ArgTypes } from './ArgTypes'
 const EventEmitter = require('events')
 import { mergeEventEmitter } from '../../../common/events'
@@ -42,6 +42,16 @@ export default class Command {
   isBreakpoint = false
   @observable
   opensWindow = false
+  /*@observable
+  hasTableInput = false*/
+  @observable
+  SelectTable
+  @observable
+  otherData
+  @observable
+  isLeftNav = 'false'
+  /*@observable
+  opensTableInput = false*/
   @observable
   windowHandleName = ''
   @observable
@@ -153,6 +163,33 @@ export default class Command {
     this.opensWindowRead = !this.opensWindowRead
   }
 
+  /*@action.bound
+  setHasTableInput(hasTableInput) {
+    if (typeof hasTableInput == typeof true) {
+      this.hasTableInput = hasTableInput
+    }
+  }*/
+
+  @action.bound
+  setTableInput(tableNewInput) {
+      this.SelectTable = tableNewInput;
+  }
+
+  @action.bound
+  setOtherData(newData) {
+    this.otherData = newData;
+  }
+
+  @action.bound
+  setIsLeftNav(isLeftNav) {
+    this.isLeftNav = isLeftNav;
+  }
+
+  /*@action.bound
+  toggleOpensTableInput() {
+    this.opensTableInput = !this.opensTableInput
+  }*/
+
   @action.bound
   setWindowTimeout(timeout) {
     this.windowTimeout = timeout
@@ -185,6 +222,17 @@ export default class Command {
       this.setWindowHandleName(jsRep.windowHandleName)
       this.setWindowTimeout(jsRep.windowTimeout)
     }
+
+    if (jsRep.SelectTable) {
+      //this.setHasTableInput(jsRep.hasTableInput)
+      this.setTableInput(jsRep.SelectTable)
+    }
+    if (jsRep.otherData) {
+      this.setOtherData(jsRep.otherData)
+    }
+    if (jsRep.isLeftNav) {
+      this.setIsLeftNav(jsRep.isLeftNav)
+    }
   }
 
   export() {
@@ -201,6 +249,17 @@ export default class Command {
       exported.opensWindow = this.opensWindow
       exported.windowHandleName = this.windowHandleName
       exported.windowTimeout = this.windowTimeout
+    }
+
+    if (this.SelectTable) {
+      //exported.hasTableInput = this.hasTableInput
+      exported.SelectTable = this.SelectTable
+    }
+    if (this.otherData) {
+      exported.otherData = this.otherData
+    }
+    if (this.isLeftNav && this.isLeftNav != 'false') {
+      exported.isLeftNav = this.isLeftNav
     }
 
     return exported

@@ -27,6 +27,7 @@ import WelcomeDialog from '../../components/Dialogs/Welcome'
 import AlertDialog from '../../components/Dialogs/Alert'
 import ModalState from '../../stores/view/ModalState'
 import NewWindowConfigurationDialog from '../../components/Dialogs/NewWindowConfiguration'
+//import TableInputConfigDialog from '../../components/Dialogs/TableInputConfig'
 import ExportDialog from '../../components/Dialogs/Export'
 import { isProduction } from '../../../common/utils'
 import UiState from '../../stores/view/UiState'
@@ -111,6 +112,14 @@ export default class Modal extends Component {
           command={UiState.selectedCommand || {}}
           isUniqueWindowName={ModalState.isUniqueWindowName}
         />
+        {/*<TableInputConfigDialog
+          isOpen={ModalState.tableInputConfigState}
+          cancel={ModalState.toggleTableInputConfig}
+          id="table-config"
+          name="table-config"
+          label="Opens Window"
+          command={UiState.selectedCommand || {}}
+        />*/}
         <ExportDialog
           isExporting={!!ModalState.exportState.isExporting}
           cancelSelection={() => {

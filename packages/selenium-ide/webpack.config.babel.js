@@ -32,7 +32,7 @@ module.exports = {
     polyfills: ['./content/setup'],
     playback: ['./content/commands-api'],
     background: ['./background/background'],
-    record: ['./content/record'],
+    record: ['./content/record_custom'],
     escape: ['./content/escape'],
     neo: ['react-hot-loader/patch', './neo/containers/Root'],
   },

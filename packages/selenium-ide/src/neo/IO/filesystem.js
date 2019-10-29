@@ -76,6 +76,17 @@ export function saveProject(_project) {
   UiState.saved()
 }
 
+export function exportProjectToWebapp(_project, callbackFn) {
+  const project = _project.toJS()
+  return exportProject(project).then(snapshot => {
+    if (snapshot) {
+      project.snapshot = snapshot
+      Object.assign(project, Manager.emitDependencies())
+    }
+    callbackFn(beautify(JSON.stringify(project)));
+  })
+}
+
 function downloadProject(project) {
   return exportProject(project).then(snapshot => {
     if (snapshot) {

@@ -199,7 +199,7 @@ function addRecordingIndicator() {
         event.target.style.visibility = 'hidden'
         setTimeout(function() {
           event.target.style.visibility = 'visible'
-        }, 1000)
+        }, 2000)
       },
       false
     )
@@ -221,7 +221,8 @@ function addRecordingIndicator() {
         )
         recordingIndicator.style.borderColor = 'black'
         setTimeout(() => {
-          recordingIndicator.style.borderColor = '#d30100'
+          if (recordingIndicator)
+            recordingIndicator.style.borderColor = '#d30100'
         }, 1000)
         sendResponse(true)
       }
@@ -322,19 +323,26 @@ export function record(
   value,
   insertBeforeLastCommand,
   actualFrameLocation
+  ,comment,
+  recordedType,
+  additionalData
 ) {
   browser.runtime
     .sendMessage({
       command: command,
       target: target,
       value: value,
+      comment: comment,
+      recordedType: recordedType,
+      additionalData: additionalData,
       insertBeforeLastCommand: insertBeforeLastCommand,
       frameLocation:
         actualFrameLocation != undefined ? actualFrameLocation : frameLocation,
       commandSideexTabId: contentSideexTabId,
     })
-    .catch(() => {
-      recorder.detach()
+    .catch((e) => {
+      //console.error(e)
+      //recorder.detach()
     })
 }
 

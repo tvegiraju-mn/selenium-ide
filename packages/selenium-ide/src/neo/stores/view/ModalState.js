@@ -36,6 +36,8 @@ class ModalState {
   }
   @observable
   newWindowConfigurationState = false
+  /*@observable
+  tableInputConfigState = false*/
   @observable
   exportState = {}
 
@@ -245,6 +247,11 @@ class ModalState {
   toggleNewWindowConfiguration() {
     this.newWindowConfigurationState = !this.newWindowConfigurationState
   }
+
+  /*@action.bound
+  toggleTableInputConfig() {
+    this.tableInputConfigState = !this.tableInputConfigState
+  }*/
 
   isUniqueWindowName(windowName, commandId) {
     const commands = UiState.selectedTest.test.commands
