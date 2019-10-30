@@ -461,9 +461,12 @@ export default class BackgroundRecorder {
     if (message.insertBeforeLastCommand) {
       record(message.command, message.target, message.value, true)
     } else {
+      var indMessage = message.command;
+      if (appType == 'BOB' && message.target[0][1] != 'id' && message.target[0][1] != 'table')
+        indMessage = indMessage + ' action does not have ID'
       this.sendRecordNotification(
         sender.tab.id,
-        message.command,
+        indMessage,
         message.target,
         message.value
       )
