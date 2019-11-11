@@ -599,6 +599,10 @@ LocatorBuilders.prototype.buildReactTableRowData = function(e) {
           var tdIdx = Array.prototype.slice.call(tdEl.parentNode.children).indexOf(tdEl)
           var divIdx = Array.prototype.slice.call(divEl.parentNode.children).indexOf(divEl)
           var finalEl = divEl.querySelectorAll('[id*=-content]')[0];
+          if (!finalEl || finalEl == null) {
+            finalEl = divEl.querySelectorAll('div');
+            finalEl = finalEl[finalEl.length - 1]
+          }
           var nodeName = finalEl.nodeName.toLowerCase();
           if (finalEl.querySelectorAll('button').length > 0)
             elementType = 'BUTTON'
