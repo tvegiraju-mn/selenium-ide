@@ -664,7 +664,7 @@ Recorder.addEventHandler(
 )
 // END
 
-let customContextMenuItems = ['mouseOver', 'jsclick', 'readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
+let customContextMenuItems = ['mouseOver', 'jsclick', 'readElementPresence', 'readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues']
 let ignoreInnerTextDisplayNameForCommands = ['readDataFromUI', 'readElementPresence', 'readElementAttribute', 'readElementStyle']
 
 // © Ming-Hung Hsu, SideeX Team
@@ -686,6 +686,9 @@ Recorder.addEventHandler(
         handleRecord('addStep', [['']], '')
       } else if (customContextMenuItems.indexOf(m.cmd) > -1) {
         handleRecord(m.cmd, locatorBuilders.buildAll(event.target, ignoreInnerTextDisplayNameForCommands.indexOf(m.cmd) > -1), '')
+      }else if (m.cmd == 'readDataFromUI') {
+        let value = event.target.value ? event.target.value : tmpVal;
+        handleRecord(m.cmd, locatorBuilders.buildAll(event.target, ignoreInnerTextDisplayNameForCommands.indexOf(m.cmd) > -1), value)
       } else if (m.cmd == 'reactTableRowData') {
         handleRecord(m.cmd, locatorBuilders.buildReactTableRowData(event.target), '');
       }
