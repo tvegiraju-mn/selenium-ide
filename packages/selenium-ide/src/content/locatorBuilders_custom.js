@@ -55,6 +55,12 @@ LocatorBuilders.prototype.buildAll = function(el, ignoreInnerText) {
   this.recordedType = undefined;
   this.additionalData = undefined;
   let e = core.firefox.unwrap(el) //Samit: Fix: Do the magic to get it to work in Firefox 4
+  if (this.appType == 'BOB') {
+    //Ignore React Upload button
+    var elClass = e.getAttribute('class');
+    if (elClass && elClass.indexOf('slds-file-selector__button') > -1)
+      return [];
+  }
   this.displayName = this.getDisplayName(e, ignoreInnerText);
   let locator
   let locators = []
