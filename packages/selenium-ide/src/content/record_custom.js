@@ -478,7 +478,7 @@ Recorder.addEventHandler(
   true
 )
 // END
-
+*/
 let dropLocator, dragstartLocator
 // © Shuo-Heng Shih, SideeX Team
 Recorder.addEventHandler(
@@ -504,11 +504,15 @@ Recorder.addEventHandler(
       event.button == 0 &&
       dragstartLocator.target !== event.target
     ) {
-      //value no option
+      var sourceLocators = locatorBuilders.buildAll(dragstartLocator.target);
+      var displayName = locatorBuilders.displayName;
+      var targetLocators = locatorBuilders.buildAll(event.target);
+      locatorBuilders.displayName = displayName + ' and drop on ' + locatorBuilders.displayName;
+      locatorBuilders.additionalData = targetLocators;
       handleRecord(
         'dragAndDropToObject',
-        locatorBuilders.buildAll(dragstartLocator.target),
-        locatorBuilders.build(event.target)
+        sourceLocators,
+        targetLocators[0][0]
       )
     }
     dragstartLocator = undefined
@@ -517,7 +521,7 @@ Recorder.addEventHandler(
   true
 )
 // END
-*/
+
 // © Shuo-Heng Shih, SideeX Team
 let prevTimeOut = null,
   scrollDetector

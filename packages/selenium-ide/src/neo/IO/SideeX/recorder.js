@@ -33,6 +33,7 @@ const actionCommentMap = {
   'readElementPresence' : 'Reading Presence',
   'checkbox': 'Check/Uncheck',
   'performWait' : 'Wait on',
+  'dragAndDropToObject' : 'Drag',
   'jsclick' : 'Click on'
 }
 const actionsReqDetails = ['readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues'];
@@ -476,6 +477,14 @@ export default class BackgroundRecorder {
     //if the element is inside table
     var recCommand = UiState.lastRecordedCommand;
     if (!recCommand) return;
+    if (message.command == 'dragAndDropToObject') {
+      var dropToObjectData = {
+        "toElementTargets": message.additionalData
+      };
+      recCommand.setOtherData(dropToObjectData);
+      //Mostly dragAndDropToObject action won't have additional inputs or from a table
+      return;
+    }
     var self = this;
     var isUserClicksOnCancel = function(response) {
       if (response.data.removeLastCommand) {
