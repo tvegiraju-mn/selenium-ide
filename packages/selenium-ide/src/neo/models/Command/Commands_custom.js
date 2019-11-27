@@ -210,4 +210,14 @@ export const Commands = [
       target: ArgTypes.resolution,
     },
   ],
+  [
+    'dragAndDropToObject',
+    {
+      name: 'drag and drop to object',
+      type: TargetTypes.LOCATOR,
+      description: 'Drags an element and drops it on another element.',
+      target: ArgTypes.locator,
+      value: ArgTypes.value,
+    },
+  ],
 ]
