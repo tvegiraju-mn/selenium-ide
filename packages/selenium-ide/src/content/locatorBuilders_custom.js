@@ -73,8 +73,15 @@ LocatorBuilders.prototype.buildAll = function(el, ignoreInnerText) {
         //Samit: The following is a quickfix for above commented code to stop exceptions on almost every locator builder
         //TODO: the builderName should NOT be used as a strategy name, create a feature to allow locatorBuilders to specify this kind of behaviour
         //TODO: Useful if a builder wants to capture a different element like a parent. Use the this.elementEquals
-        //let fe = this.findElement(locator)
-        if (finderName == 'leftNav' || finderName == 'xpath:comppathRelative' || finderName == 'table' || e == this.findElement(locator)) {
+        let fe = this.findElement(locator)
+        var isElementMatchedWithBuiltLocator = (e == fe)
+        //If the element is not matched with built locator and appType is BOB
+        //if it is part of popover, add that locator to record the action
+        if (!isElementMatchedWithBuiltLocator && this.appType == 'BOB') {
+          if (e.closest('[class*=slds-popover]'))
+            isElementMatchedWithBuiltLocator = true
+        }
+        if (finderName == 'leftNav' || finderName == 'xpath:comppathRelative' || finderName == 'table' || isElementMatchedWithBuiltLocator) {
           locators.push([locator, finderName])
         }
       }
