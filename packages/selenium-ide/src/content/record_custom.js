@@ -140,6 +140,25 @@ Recorder.addEventHandler(
       var shouldRecordClick = true;
       if (('input' == tagName && Recorder.inputTypes.indexOf(type) > -1) || ignoreClickOnOtherTags.indexOf(tagName) > -1) {
         shouldRecordClick = false;
+        if (tagName == 'select' || tagName == 'option') {
+          var selOption = getOptionLocator(event.target.options[event.target.selectedIndex]);
+          if (this.recordingState.lastSelectField == event.target && this.recordingState.lastSelectedOption == selOption) {
+            handleRecord('select', locatorBuilders.buildAll(event.target), selOption);
+            this.recordingState.lastSelectedOption = undefined;
+            this.recordingState.lastSelectField = undefined;
+          } else if (!this.recordingState.lastSelectField && !this.recordingState.lastSelectedOption) {
+            this.recordingState.lastSelectedOption = selOption;
+            this.recordingState.lastSelectField = event.target;
+          } else {
+            this.recordingState.lastSelectedOption = undefined;
+            this.recordingState.lastSelectField = undefined;
+          }
+          /*else if ( event.target.value != undefined && event.target.value != '' && (('input' == tagName && Recorder.inputTypes.indexOf(type) > -1) || tagName == 'textarea'))
+           handleRecord('type', locatorBuilders.buildAll(event.target), event.target.value);*/
+        } else {
+          this.recordingState.lastSelectedOption = undefined;
+          this.recordingState.lastSelectField = undefined;
+        }
       }
       if (!this.recordingState.preventClickTwice && shouldRecordClick) {
         if (tagName == 'input' && type == 'checkbox') {
