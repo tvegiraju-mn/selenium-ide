@@ -695,17 +695,17 @@ LocatorBuilders.prototype.logging = function(message) {
 LocatorBuilders.prototype.setPreferredOrderByAppType = function(appType) {
   this.appType = appType;
   if (appType == 'MN')
-    LocatorBuilders.setPreferredOrder('leftNav,table,xpath:comppath,xpath:comppathRelative,xpath:attributes,xpath:link,linkText,name,' +
+    LocatorBuilders.setPreferredOrder('leftNav,table,xpath:comppath,xpath:popupsinmn,xpath:comppathRelative,xpath:attributes,xpath:link,linkText,name,' +
         'xpath:innerText,xpath:img,id,xpath:idRelative,xpath:href,xpath:position,css:data-attr');
   else if (appType == 'Flex')
     LocatorBuilders.setPreferredOrder('table,xpath:attributes,name,id,xpath:link,xpath:idRelative,xpath:innerText,linkText,' +
-        'xpath:img,xpath:href,xpath:position,css:data-attr,leftNav,xpath:comppath,xpath:comppathRelative');
+        'xpath:img,xpath:href,xpath:position,css:data-attr,leftNav,xpath:comppath,xpath:comppathRelative,xpath:popupsinmn');
   else if (appType == 'BOB')
     LocatorBuilders.setPreferredOrder('table,id,linkText,name,css:data-attr,xpath:link,xpath:img,xpath:idRelative,xpath:attributes,' +
-        'xpath:href,xpath:position,xpath:innerText,leftNav,xpath:comppath,xpath:comppathRelative');
+        'xpath:href,xpath:position,xpath:innerText,leftNav,xpath:comppath,xpath:comppathRelative,xpath:popupsinmn');
   else
     LocatorBuilders.setPreferredOrder('id,linkText,name,css:data-attr,xpath:link,xpath:img,xpath:attributes,xpath:idRelative,' +
-        'xpath:href,xpath:position,xpath:innerText,table,leftNav,xpath:comppath,xpath:comppathRelative');
+        'xpath:href,xpath:position,xpath:innerText,table,leftNav,xpath:comppath,xpath:comppathRelative,xpath:popupsinmn');
   console.log('Updated order for App Type: ' + this.appType);
 }
 
@@ -995,6 +995,50 @@ LocatorBuilders.add('xpath:comppathRelative', function xpathComppathRelative(e) 
       }
     current = current.parentNode;
   }
+  return null;
+})
+
+LocatorBuilders.add('xpath:popupsinmn', function specialCasesInMN(e) {
+  if (this.appType != 'MN')
+    return null;
+  var detailTitleBar = e.closest('[class*=detailTitleBar]');
+  var alertBar = e.closest('[class*=showAlert]');
+  var msgPopup = e.closest('[class*=CMnDisplayMsgComp],[class*=CMnPopupComp]');
+  var errorIcon = e.closest('[class*=fieldError]');// span class=fieldError for error icon
+  var errorMsgPopup = e.closest('[class*=validationContainer]');
+  var locator;
+  if (detailTitleBar || alertBar) {
+    //find parent element for which comppath is defined and build locator relative to that
+    var comppathEl = e.closest('[comppath*=root]');
+    if (comppathEl) {
+      var comppath = comppathEl.getAttribute('comppath');
+      var titleClass = detailTitleBar ? 'detailTitleBar' : 'showAlert';
+      locator = "//*[@comppath='" + comppath + "']" + "//*[contains(@class,'" + titleClass + "')]//*[normalize-space(@class)='title']";
+    }
+  } else if (msgPopup) {
+    if (e.closest('table')) {
+      locator = "//*[contains(@class,'CMnDisplayMsgComp') or contains(@class,'CMnPopupComp')]//*[normalize-space(@class)='msgText']";
+    }
+  } else if (errorMsgPopup) {
+    locator = "//*[contains(@class,'validationContainer')]";
+    var elClass = e.getAttribute('class');
+    var elStyle = e.getAttribute('style');
+    //message is present at 2nd div child of above validationContainer
+    if (elClass && elClass.indexOf('closeLink') > -1)
+      locator = locator + "//*[contains(@class,'closeLink')]";
+    else if (elStyle && elStyle.indexOf('block') > -1)
+      locator = locator + "/div[2]";
+  } else if (errorIcon) {
+    //Below may need special handling if more than one error field appears at once on the page
+    //currently handled for one error field case only
+    locator = "//*[contains(@class,'fieldError') and contains(@class,'fa-fw')]";
+    if (this.isElementUniqueWithXPath(locator, e))
+      return 'xpath=' + locator;
+    else
+      locator = undefined;
+  }
+  if (locator)
+    return "xpath=" + locator;
   return null;
 })
 
