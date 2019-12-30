@@ -1,10 +1,11 @@
-/*
- * Created by tvegiraju
-*/
+/**
+ * Created by Tvegiraju on 12/27/2019.
+ */
+
 import finder from '@medv/finder'
 
-export default function locatorBuilder_Base(locatorBuilders) {
-    this.locatorBuilders = locatorBuilders;
+export default function locatorBuilder_Base() {
+
 }
 
 locatorBuilder_Base.prototype.updateAppSpecificOrder = function () {
@@ -16,7 +17,7 @@ locatorBuilder_Base.prototype.updateAppSpecificOrder = function () {
     LocatorBuilders.add('css:finder', cssFinder);
     LocatorBuilders.add('xpath:link', xpathLink);
     LocatorBuilders.add('xpath:img', xpathImg);
-    LocatorBuilders.add('xpath:attributes', this.locatorBuilders.xpathAttr);
+    LocatorBuilders.add('xpath:attributes', locatorBuilders.xpathAttr);
     LocatorBuilders.add('xpath:idRelative', xpathIdRelative);
     LocatorBuilders.add('xpath:href', xpathHref);
     LocatorBuilders.add('xpath:position', xpathPosition);

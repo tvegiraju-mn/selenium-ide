@@ -1,13 +1,13 @@
-/*
- * Created by tvegiraju
-*/
+/**
+ * Created by Tvegiraju on 12/27/2019.
+ */
 
-export default function locatorBuilder_BOB(locatorBuilders) {
-    this.locatorBuilders = locatorBuilders;
+export default function locatorBuilder_BOB() {
+
 }
 
 locatorBuilder_BOB.prototype.updateAppSpecificOrder = function () {
-    this.locatorBuilders.buildReactTableRowData = buildReactTableRowData;
+    locatorBuilders.buildReactTableRowData = buildReactTableRowData;
     LocatorBuilders.add('table', table);
     LocatorBuilders.add('id', id);
 };

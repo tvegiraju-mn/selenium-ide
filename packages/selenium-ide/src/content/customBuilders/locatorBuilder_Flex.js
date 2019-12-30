@@ -1,6 +1,6 @@
-/*
- * Created by tvegiraju
-*/
+/**
+ * Created by Tvegiraju on 12/27/2019.
+ */
 
 const PREFERRED_ATTRIBUTES = [
     'name',
@@ -12,14 +12,14 @@ const PREFERRED_ATTRIBUTES = [
     'onclick'
 ]
 
-export default function locatorBuilder_Flex(locatorBuilders) {
-    this.locatorBuilders = locatorBuilders;
+export default function locatorBuilder_Flex() {
+
 }
 
 locatorBuilder_Flex.prototype.updateAppSpecificOrder = function () {
     LocatorBuilders.PREFERRED_ATTRIBUTES = PREFERRED_ATTRIBUTES;
     LocatorBuilders.add('table', table);
-    LocatorBuilders.add('xpath:attributes', this.locatorBuilders.xpathAttr);
+    LocatorBuilders.add('xpath:attributes', locatorBuilders.xpathAttr);
 }
 
 function getXpathOfAnElement(e) {

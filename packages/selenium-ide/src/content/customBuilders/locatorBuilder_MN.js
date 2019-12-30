@@ -1,9 +1,9 @@
-/*
- * Created by tvegiraju
-*/
+/**
+ * Created by Tvegiraju on 12/27/2019.
+ */
 
-export default function locatorBuilder_MN(locatorBuilders) {
-    this.locatorBuilders = locatorBuilders;
+export default function locatorBuilder_MN() {
+
 }
 const PREFERRED_ATTRIBUTES = [
     'comppath',
@@ -22,7 +22,7 @@ locatorBuilder_MN.prototype.updateAppSpecificOrder = function () {
     LocatorBuilders.add('xpath:comppath', xpathComppath);
     LocatorBuilders.add('xpath:popupsinmn', specialCasesInMN);
     LocatorBuilders.add('xpath:comppathRelative', xpathComppathRelative);
-    LocatorBuilders.add('xpath:attributes', this.locatorBuilders.xpathAttr);
+    LocatorBuilders.add('xpath:attributes', locatorBuilders.xpathAttr);
     var origDisplayNameFn = locatorBuilders.getDisplayName;
     locatorBuilders.getDisplayName = function(e, ignoreInnerText) {
         debugger;
