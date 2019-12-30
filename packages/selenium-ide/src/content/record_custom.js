@@ -21,19 +21,55 @@ import goog, { bot } from './closure-polyfill'
 import { Recorder, recorder, record } from './record-api'
 import { attach } from './prompt-recorder'
 import LocatorBuilders from './locatorBuilders_custom'
+import locatorBuilder_MN from './customlocatorBuilders/locatorBuilder_MN'
+import locatorBuilder_BOB from './customlocatorBuilders/locatorBuilder_BOB'
+import locatorBuilder_Flex from './customlocatorBuilders/locatorBuilder_Flex'
+import locatorBuilder_Base from './customlocatorBuilders/locatorBuilder_Base'
 import { isTest, isFirefox } from '../common/utils'
 
 export { record }
 export const locatorBuilders = new LocatorBuilders(window)
+const BaseBuilder = new locatorBuilder_Base(locatorBuilders);
+const MNBuilder = new locatorBuilder_MN(locatorBuilders);
+const FlexBuilder = new locatorBuilder_Flex(locatorBuilders);
+const BOBBuilder = new locatorBuilder_BOB(locatorBuilders);
+var buildersMap = {
+  'MN': MNBuilder,
+  'Flex': FlexBuilder,
+  'BOB': BOBBuilder
+};
+
 
 attach(record)
 
+function updateAppType(appType) {
+  var customBuilder = buildersMap[appType];
+  if (!customBuilder)
+    customBuilder = BaseBuilder;
+  //Clean up locator builder
+  locatorBuilders.cleanup();
+  //update app specific methods
+  customBuilder.updateAppSpecificOrder();
+}
+
+function setPreferredOrderByAppTypeFirstTime() {
+  browser.runtime.sendMessage({type: "getAppType"}).then(function(response) {
+    if (response && response.appType) {
+      updateAppType(response.appType);
+      console.log('Updated First time order for App Type: ' + response.appType);
+    }
+  });
+}
+
 function updateAppTypeHandler(message, _sender, sendResponse) {
   if (message.updateAppType) {
-    locatorBuilders.setPreferredOrderByAppType(message.appType)
+    console.log('inside update apptype to : ' + message.appType);
+    //locatorBuilders.setPreferredOrderByAppType(message.appType)
+    updateAppType(message.appType);
     sendResponse(true)
   }
 }
+setPreferredOrderByAppTypeFirstTime();
 
 browser.runtime.onMessage.addListener(updateAppTypeHandler)
 
