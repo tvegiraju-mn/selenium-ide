@@ -6,11 +6,31 @@ export default function locatorBuilder_BOB() {
 
 }
 
-locatorBuilder_BOB.prototype.updateAppSpecificOrder = function () {
+locatorBuilder_BOB.updateAppSpecificOrder = function () {
+    console.log('inside React custom')
     locatorBuilders.buildReactTableRowData = buildReactTableRowData;
+    locatorBuilders.isElementEligibleForRecording = isElementEligibleForRecordingCustom;
+    locatorBuilders.isElementFoundByLocatorNotMatchedEligibleForRecording = isElementFoundByLocatorNotMatchedEligibleForRecordingCustom;
     LocatorBuilders.add('table', table);
     LocatorBuilders.add('id', id);
 };
+
+function isElementEligibleForRecordingCustom(e) {
+    console.log('custom BOB isElementEligibleForRecording');
+    //Ignore React Upload button
+    var elClass = e.getAttribute('class');
+    return !(elClass && elClass.indexOf('slds-file-selector__button') > -1);
+}
+
+function isElementFoundByLocatorNotMatchedEligibleForRecordingCustom(origEl, newlyFoundEl) {
+    console.log('custom BOB isElementFoundByLocatorNotMatchedEligibleForRecording');
+    var isElementMatchedWithBuiltLocator = (origEl == newlyFoundEl);
+    //If the element is not matched with built locator and appType is BOB
+    //if it is part of popover, add that locator to record the action
+    if (!isElementMatchedWithBuiltLocator && origEl.closest('[class*=slds-popover]'))
+        isElementMatchedWithBuiltLocator = true;
+    return isElementMatchedWithBuiltLocator;
+}
 
 function buildReactTableRowData(e) {
     try {

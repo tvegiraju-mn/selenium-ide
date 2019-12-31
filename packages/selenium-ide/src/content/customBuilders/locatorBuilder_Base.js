@@ -8,7 +8,7 @@ export default function locatorBuilder_Base() {
 
 }
 
-locatorBuilder_Base.prototype.updateAppSpecificOrder = function () {
+locatorBuilder_Base.updateAppSpecificOrder = function () {
     console.log('inside base')
     LocatorBuilders.add('css:data-attr', cssDataAttr);
     LocatorBuilders.add('id', id);

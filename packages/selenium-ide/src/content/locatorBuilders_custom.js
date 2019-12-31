@@ -28,7 +28,6 @@ window.LocatorBuilders = LocatorBuilders
 LocatorBuilders.prototype.detach = function() {}
 
 LocatorBuilders.prototype.buildWith = function(name, e, opt_contextNode) {
-  console.log('buildWith: ' + name);
   return LocatorBuilders.builderMap[name].call(this, e, opt_contextNode)
 }
 
@@ -56,13 +55,8 @@ LocatorBuilders.prototype.buildAll = function(el, ignoreInnerText) {
   this.recordedType = undefined;
   this.additionalData = undefined;
   let e = core.firefox.unwrap(el) //Samit: Fix: Do the magic to get it to work in Firefox 4
-  if (this.appType == 'BOB') {
-    //Ignore React Upload button
-    var elClass = e.getAttribute('class');
-    if (elClass && elClass.indexOf('slds-file-selector__button') > -1)
-      return [];
-  }
-  console.log('before displayname: ' + LocatorBuilders.order.length);
+  if (!this.isElementEligibleForRecording(e))
+    return [];
   this.displayName = this.getDisplayName(e, ignoreInnerText);
   let locator
   let locators = []
@@ -76,14 +70,8 @@ LocatorBuilders.prototype.buildAll = function(el, ignoreInnerText) {
         //TODO: the builderName should NOT be used as a strategy name, create a feature to allow locatorBuilders to specify this kind of behaviour
         //TODO: Useful if a builder wants to capture a different element like a parent. Use the this.elementEquals
         let fe = this.findElement(locator)
-        var isElementMatchedWithBuiltLocator = (e == fe)
-        //If the element is not matched with built locator and appType is BOB
-        //if it is part of popover, add that locator to record the action
-        if (!isElementMatchedWithBuiltLocator && this.appType == 'BOB') {
-          if (e.closest('[class*=slds-popover]'))
-            isElementMatchedWithBuiltLocator = true
-        }
-        if (finderName == 'leftNav' || finderName == 'xpath:comppathRelative' || finderName == 'table' || isElementMatchedWithBuiltLocator) {
+        var isElementMatchedWithBuiltLocator = this.isElementFoundByLocatorNotMatchedEligibleForRecording(e, fe);
+        if (LocatorBuilders.finderNamesToAddLocatorEvenIfElNotMatched.includes(finderName) || finderName == 'table' || isElementMatchedWithBuiltLocator) {
           locators.push([locator, finderName])
         }
       }
@@ -110,19 +98,25 @@ LocatorBuilders.prototype.findElement = function(loc) {
   }
 }
 
-/*
- * Class methods
- */
-
-LocatorBuilders.prototype.buildReactTableRowData = function(e) {
+function buildReactTableRowDataFn(e) {
   return undefined;
-};
+}
+function isElementEligibleForRecordingCustomFn(e) {
+  return true;
+}
+function isElementFoundByLocatorNotMatchedEligibleForRecordingFn(origEl, newlyFoundEl) {
+  return (origEl == newlyFoundEl);
+}
+
+LocatorBuilders.prototype.buildReactTableRowData = buildReactTableRowDataFn;
+LocatorBuilders.prototype.isElementEligibleForRecording = isElementEligibleForRecordingCustomFn;
+LocatorBuilders.prototype.isElementFoundByLocatorNotMatchedEligibleForRecording = isElementFoundByLocatorNotMatchedEligibleForRecordingFn;
 
 LocatorBuilders.prototype.cleanup = function() {
-  console.log('cleanup step')
-  LocatorBuilders.order = []
-  LocatorBuilders.builderMap = {}
-  LocatorBuilders._preferredOrder = []
+  LocatorBuilders.order = [];
+  LocatorBuilders.builderMap = {};
+  LocatorBuilders._preferredOrder = [];
+  LocatorBuilders.finderNamesToAddLocatorEvenIfElNotMatched = [];
   LocatorBuilders.PREFERRED_ATTRIBUTES = [
     'id',
     'name',
@@ -130,17 +124,17 @@ LocatorBuilders.prototype.cleanup = function() {
     'type',
     'action',
     'onclick'
-  ]
-  debugger;
+  ];
   if (!LocatorBuilders.getDisplayNameFn)
     LocatorBuilders.getDisplayNameFn = this.getDisplayName;
   else
     this.getDisplayName = LocatorBuilders.getDisplayNameFn;
-  this.buildReactTableRowData = function(e) {
-    return undefined;
-  };
-}
+  this.buildReactTableRowData = buildReactTableRowDataFn;
+  this.isElementEligibleForRecording = isElementEligibleForRecordingCustomFn;
+  this.isElementFoundByLocatorNotMatchedEligibleForRecording = isElementFoundByLocatorNotMatchedEligibleForRecordingFn;
+};
 
+LocatorBuilders.finderNamesToAddLocatorEvenIfElNotMatched = [];
 LocatorBuilders.PREFERRED_ATTRIBUTES = [
   'id',
   'name',
@@ -150,6 +144,10 @@ LocatorBuilders.PREFERRED_ATTRIBUTES = [
   'onclick'
 ]
 
+/*
+ * Class methods
+ */
+
 LocatorBuilders.order = []
 LocatorBuilders.builderMap = {}
 LocatorBuilders._preferredOrder = []
@@ -157,7 +155,6 @@ LocatorBuilders._preferredOrder = []
 // classObservable(LocatorBuilders);
 
 LocatorBuilders.add = function(name, finder) {
-  console.log('adding finderName: ' + name);
   this.order.push(name)
   this.builderMap[name] = finder
   this._orderChanged()

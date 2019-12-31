@@ -16,7 +16,8 @@ export default function locatorBuilder_Flex() {
 
 }
 
-locatorBuilder_Flex.prototype.updateAppSpecificOrder = function () {
+locatorBuilder_Flex.updateAppSpecificOrder = function () {
+    console.log('inside Flex custom')
     LocatorBuilders.PREFERRED_ATTRIBUTES = PREFERRED_ATTRIBUTES;
     LocatorBuilders.add('table', table);
     LocatorBuilders.add('xpath:attributes', locatorBuilders.xpathAttr);

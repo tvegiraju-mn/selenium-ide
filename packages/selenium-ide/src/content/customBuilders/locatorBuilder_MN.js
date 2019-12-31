@@ -12,20 +12,25 @@ const PREFERRED_ATTRIBUTES = [
     'value',
     'action',
     'onclick'
-]
+];
 
-locatorBuilder_MN.prototype.updateAppSpecificOrder = function () {
+const finderNamesToAddLocatorEvenIfElNotMatched = [
+    'leftNav',
+    'xpath:comppathRelative'
+];
+
+locatorBuilder_MN.updateAppSpecificOrder = function () {
     console.log('inside mn custom')
     LocatorBuilders.PREFERRED_ATTRIBUTES = PREFERRED_ATTRIBUTES;
+    LocatorBuilders.finderNamesToAddLocatorEvenIfElNotMatched = finderNamesToAddLocatorEvenIfElNotMatched;
     LocatorBuilders.add('leftNav', leftNav);
     LocatorBuilders.add('table', table);
     LocatorBuilders.add('xpath:comppath', xpathComppath);
-    LocatorBuilders.add('xpath:popupsinmn', specialCasesInMN);
+    LocatorBuilders.add('xpath:titleAndPopUp', generateXPathForTitleAndPopUp);
     LocatorBuilders.add('xpath:comppathRelative', xpathComppathRelative);
     LocatorBuilders.add('xpath:attributes', locatorBuilders.xpathAttr);
     var origDisplayNameFn = locatorBuilders.getDisplayName;
     locatorBuilders.getDisplayName = function(e, ignoreInnerText) {
-        debugger;
         var displayName = origDisplayNameFn.apply(this, arguments);
         if (!displayName) {
             console.log('custom MN displayName');
@@ -36,14 +41,12 @@ locatorBuilder_MN.prototype.updateAppSpecificOrder = function () {
 };
 
 function getXpathFromComppathAttr(nodeName, comppath) {
-    debugger;//asldjflsdjfsdlkf
     var xpathCond = '[' + locatorBuilders.getXpathForAttribute('comppath', comppath) + ']';
     return '//' + locatorBuilders.xpathHtmlElement(nodeName.toLowerCase()) + xpathCond;
 }
 
 function getXpathOfAnElement(e, skipCases) {
     var elXpath = undefined;
-    debugger;//asldjflsdjfsdlkf
     var comppath = e.getAttribute('comppath');
     if (comppath) {
         if (comppath.indexOf('spreadsheetContainer') > -1 && skipCases)
@@ -158,7 +161,7 @@ function xpathComppath(e) {
     return null;
 }
 
-function specialCasesInMN(e) {
+function generateXPathForTitleAndPopUp(e) {
     var detailTitleBar = e.closest('[class*=detailTitleBar]');
     var alertBar = e.closest('[class*=showAlert]');
     var msgPopup = e.closest('[class*=CMnDisplayMsgComp],[class*=CMnPopupComp]');
