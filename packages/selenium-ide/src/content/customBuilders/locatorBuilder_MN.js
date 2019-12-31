@@ -90,16 +90,16 @@ function getCustomDisplayNameFn(e) {
 function table(e) {
     var elXpath = getXpathOfAnElement(e, true);
     if (elXpath) {
-        var parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\')]';
-            // or contains(@class,\'tableRow footerRow footerRow-\')
+        var parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\') ' +
+            'or contains(@class,\'tableRow footerRow footerRow-\')]';
         var tdEl = this.findElement(parXpath);
         if (tdEl) {
             var rowType = 'data';
             if (tdEl.getAttribute('class').includes('headerRow-')) {
                 rowType = 'header';
-            }/*else if (tdEl.getAttribute('class').includes('footerRow-')) {
-             rowType = 'footer';
-             }*/
+            } else if (tdEl.getAttribute('class').includes('footerRow-')) {
+                rowType = 'footer';
+            }
             var elementType = '';
             var nodeName = e.nodeName.toLowerCase();
             var eType = e.type ? e.type.toLowerCase() : '';

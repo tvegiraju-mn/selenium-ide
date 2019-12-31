@@ -2,6 +2,12 @@
  * Created by Tvegiraju on 12/27/2019.
  */
 
+const PREFERRED_ATTRIBUTES = [
+    'id',
+    'data-id',
+    'name'
+];
+
 export default function locatorBuilder_BOB() {
 
 }
@@ -11,8 +17,12 @@ locatorBuilder_BOB.updateAppSpecificOrder = function () {
     locatorBuilders.buildReactTableRowData = buildReactTableRowData;
     locatorBuilders.isElementEligibleForRecording = isElementEligibleForRecordingCustom;
     locatorBuilders.isElementFoundByLocatorNotMatchedEligibleForRecording = isElementFoundByLocatorNotMatchedEligibleForRecordingCustom;
+    LocatorBuilders.PREFERRED_ATTRIBUTES = PREFERRED_ATTRIBUTES;
     LocatorBuilders.add('table', table);
     LocatorBuilders.add('id', id);
+    //Below methods can be removed from BOB, as these won't be required in future
+    LocatorBuilders.add('xpath:idRelative', xpathIdRelative);
+    LocatorBuilders.add('xpath:attributes', locatorBuilders.xpathAttr);
 };
 
 function isElementEligibleForRecordingCustom(e) {
@@ -147,6 +157,34 @@ function table(e) {
 function id(e) {
     if (e.id) {
         return 'id=' + e.id
+    }
+    return null
+}
+
+function xpathIdRelative(e) {
+    let path = ''
+    let current = e
+    while (current != null) {
+        if (current.parentNode != null) {
+            path = this.relativeXPathFromParent(current) + path
+            if (
+                1 == current.parentNode.nodeType && // ELEMENT_NODE
+                current.parentNode.getAttribute('id')
+            ) {
+                return this.preciseXPath(
+                    '//' +
+                    this.xpathHtmlElement(current.parentNode.nodeName.toLowerCase()) +
+                    '[@id=' +
+                    this.attributeValue(current.parentNode.getAttribute('id')) +
+                    ']' +
+                    path,
+                    e
+                )
+            }
+        } else {
+            return null
+        }
+        current = current.parentNode
     }
     return null
 }
