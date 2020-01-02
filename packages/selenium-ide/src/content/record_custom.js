@@ -21,16 +21,20 @@ import goog, { bot } from './closure-polyfill'
 import { Recorder, recorder, record } from './record-api'
 import { attach } from './prompt-recorder'
 import LocatorBuilders from './locatorBuilders_custom'
+import customLocatorBuilders from './customLocatorBuilders'
 import { isTest, isFirefox } from '../common/utils'
 
 export { record }
 export const locatorBuilders = new LocatorBuilders(window)
+const customBuilders = new customLocatorBuilders(locatorBuilders);
 
 attach(record)
 
 function updateAppTypeHandler(message, _sender, sendResponse) {
   if (message.updateAppType) {
-    locatorBuilders.setPreferredOrderByAppType(message.appType)
+    console.log('inside update apptype to : ' + message.appType);
+    //locatorBuilders.setPreferredOrderByAppType(message.appType)
+    customBuilders.updateAppType(message.appType);
     sendResponse(true)
   }
 }
@@ -39,6 +43,10 @@ browser.runtime.onMessage.addListener(updateAppTypeHandler)
 
 function handleRecord(cmd, targets, value) {
   record(cmd, targets, value, undefined, undefined, locatorBuilders.displayName, locatorBuilders.recordedType, locatorBuilders.additionalData)
+}
+
+function buildLocators(el, ignoreInnerText) {
+  return locatorBuilders.buildAll(el, ignoreInnerText);
 }
 
 Recorder.inputTypes = [
@@ -64,7 +72,7 @@ Recorder.addEventHandler('type', 'change', function(event) {
   let tagName = event.target.tagName.toLowerCase()
   let type = event.target.type
   if (('input' == tagName && Recorder.inputTypes.indexOf(type) >= 0) || 'textarea' == tagName) {
-    handleRecord('type', locatorBuilders.buildAll(event.target), event.target.value)
+    handleRecord('type', buildLocators(event.target), event.target.value)
   }
   /*// © Chen-Chieh Ping, SideeX Team
   if (
@@ -80,7 +88,7 @@ Recorder.addEventHandler('type', 'change', function(event) {
       if (event.target.value.length > 0) {
         handleRecord(
           'type',
-          locatorBuilders.buildAll(event.target),
+          buildLocators(event.target),
           event.target.value
         )
 
@@ -95,7 +103,7 @@ Recorder.addEventHandler('type', 'change', function(event) {
 
           handleRecord(
             'sendKeys',
-            locatorBuilders.buildAll(this.recordingState.enterTarget),
+            buildLocators(this.recordingState.enterTarget),
             '${KEY_ENTER}'
           )
           this.recordingState.enterTarget = null
@@ -104,12 +112,12 @@ Recorder.addEventHandler('type', 'change', function(event) {
       } else {
         handleRecord(
           'type',
-          locatorBuilders.buildAll(event.target),
+          buildLocators(event.target),
           event.target.value
         )
       }
     } else if ('textarea' == tagName) {
-      handleRecord('type', locatorBuilders.buildAll(event.target), event.target.value)
+      handleRecord('type', buildLocators(event.target), event.target.value)
     }
   }
   this.recordingState.typeLock = 0*/
@@ -143,7 +151,7 @@ Recorder.addEventHandler(
         if (tagName == 'select' || tagName == 'option') {
           var selOption = getOptionLocator(event.target.options[event.target.selectedIndex]);
           if (this.recordingState.lastSelectField == event.target && this.recordingState.lastSelectedOption == selOption) {
-            handleRecord('select', locatorBuilders.buildAll(event.target), selOption);
+            handleRecord('select', buildLocators(event.target), selOption);
             this.recordingState.lastSelectedOption = undefined;
             this.recordingState.lastSelectField = undefined;
           } else if (!this.recordingState.lastSelectField && !this.recordingState.lastSelectedOption) {
@@ -154,7 +162,7 @@ Recorder.addEventHandler(
             this.recordingState.lastSelectField = undefined;
           }
           /*else if ( event.target.value != undefined && event.target.value != '' && (('input' == tagName && Recorder.inputTypes.indexOf(type) > -1) || tagName == 'textarea'))
-           handleRecord('type', locatorBuilders.buildAll(event.target), event.target.value);*/
+           handleRecord('type', buildLocators(event.target), event.target.value);*/
         } else {
           this.recordingState.lastSelectedOption = undefined;
           this.recordingState.lastSelectField = undefined;
@@ -164,9 +172,9 @@ Recorder.addEventHandler(
         if (tagName == 'input' && type == 'checkbox') {
           var isChecked = event.target.getAttribute('checked') || event.target.getAttribute('checked') == 'true';
           var value = !isChecked ? 'on' : 'off';
-          handleRecord('checkbox', locatorBuilders.buildAll(event.target), value);
+          handleRecord('checkbox', buildLocators(event.target), value);
         } else
-          handleRecord('click', locatorBuilders.buildAll(event.target), '')
+          handleRecord('click', buildLocators(event.target), '')
         this.recordingState.preventClickTwice = true
       }
       setTimeout(() => {
@@ -183,7 +191,7 @@ Recorder.addEventHandler(
   'doubleClickAt',
   'dblclick',
   function(event) {
-    handleRecord('doubleClick', locatorBuilders.buildAll(event.target), '')
+    handleRecord('doubleClick', buildLocators(event.target), '')
   },
   true
 )
@@ -210,7 +218,7 @@ Recorder.addEventHandler(
           ) {
             handleRecord(
               'sendKeys',
-              locatorBuilders.buildAll(this.recordingState.enterTarget),
+              buildLocators(this.recordingState.enterTarget),
               '${KEY_ENTER}'
             )
             this.recordingState.enterTarget = null
@@ -224,7 +232,7 @@ Recorder.addEventHandler(
             }
             handleRecord(
               'sendKeys',
-              locatorBuilders.buildAll(this.recordingState.enterTarget),
+              buildLocators(this.recordingState.enterTarget),
               '${KEY_ENTER}'
             )
             this.recordingState.enterTarget = null
@@ -242,7 +250,7 @@ Recorder.addEventHandler(
               if (this.recordingState.typeTarget.value.length > 0) {
                 handleRecord(
                   'type',
-                  locatorBuilders.buildAll(this.recordingState.typeTarget),
+                  buildLocators(this.recordingState.typeTarget),
                   this.recordingState.typeTarget.value
                 )
 
@@ -256,7 +264,7 @@ Recorder.addEventHandler(
                   }
                   handleRecord(
                     'sendKeys',
-                    locatorBuilders.buildAll(this.recordingState.enterTarget),
+                    buildLocators(this.recordingState.enterTarget),
                     '${KEY_ENTER}'
                   )
                   this.recordingState.enterTarget = null
@@ -265,14 +273,14 @@ Recorder.addEventHandler(
               } else {
                 handleRecord(
                   'type',
-                  locatorBuilders.buildAll(this.recordingState.typeTarget),
+                  buildLocators(this.recordingState.typeTarget),
                   this.recordingState.typeTarget.value
                 )
               }
             } else if ('textarea' == tagName) {
               handleRecord(
                 'type',
-                locatorBuilders.buildAll(this.recordingState.typeTarget),
+                buildLocators(this.recordingState.typeTarget),
                 this.recordingState.typeTarget.value
               )
             }
@@ -300,7 +308,7 @@ Recorder.addEventHandler(
           if (tempbool) {
             handleRecord(
               'type',
-              locatorBuilders.buildAll(event.target),
+              buildLocators(event.target),
               this.recordingState.tempValue
             )
           }
@@ -312,13 +320,13 @@ Recorder.addEventHandler(
           if (key == 38)
             handleRecord(
               'sendKeys',
-              locatorBuilders.buildAll(event.target),
+              buildLocators(event.target),
               '${KEY_UP}'
             )
           else
             handleRecord(
               'sendKeys',
-              locatorBuilders.buildAll(event.target),
+              buildLocators(event.target),
               '${KEY_DOWN}'
             )
           this.recordingState.tabCheck = event.target
@@ -327,7 +335,7 @@ Recorder.addEventHandler(
           if (this.recordingState.tabCheck == event.target) {
             handleRecord(
               'sendKeys',
-              locatorBuilders.buildAll(event.target),
+              buildLocators(event.target),
               '${KEY_TAB}'
             )
             this.recordingState.preventType = true
@@ -434,17 +442,17 @@ Recorder.addEventHandler(
             window.scrollY
           handleRecord(
             'mouseDownAt',
-            locatorBuilders.buildAll(selectMousedown.target),
+            buildLocators(selectMousedown.target),
             sourceRelateX + ',' + sourceRelateY
           )
           handleRecord(
             'mouseMoveAt',
-            locatorBuilders.buildAll(mouseoverQ[1].target),
+            buildLocators(mouseoverQ[1].target),
             targetRelateX + ',' + targetRelateY
           )
           handleRecord(
             'mouseUpAt',
-            locatorBuilders.buildAll(mouseoverQ[1].target),
+            buildLocators(mouseoverQ[1].target),
             targetRelateX + ',' + targetRelateY
           )
         } else {
@@ -458,17 +466,17 @@ Recorder.addEventHandler(
             window.scrollY
           handleRecord(
             'mouseDownAt',
-            locatorBuilders.buildAll(event.target),
+            buildLocators(event.target),
             targetRelateX + ',' + targetRelateY
           )
           handleRecord(
             'mouseMoveAt',
-            locatorBuilders.buildAll(event.target),
+            buildLocators(event.target),
             targetRelateX + ',' + targetRelateY
           )
           handleRecord(
             'mouseUpAt',
-            locatorBuilders.buildAll(event.target),
+            buildLocators(event.target),
             targetRelateX + ',' + targetRelateY
           )
         }
@@ -480,10 +488,10 @@ Recorder.addEventHandler(
       let y = event.clientY - mousedown.clientY
 
       if (mousedown && mousedown.target !== event.target && !(x + y)) {
-        handleRecord('mouseDown', locatorBuilders.buildAll(mousedown.target), '')
-        handleRecord('mouseUp', locatorBuilders.buildAll(event.target), '')
+        handleRecord('mouseDown', buildLocators(mousedown.target), '')
+        handleRecord('mouseUp', buildLocators(event.target), '')
       } else if (mousedown && mousedown.target === event.target) {
-        let target = locatorBuilders.buildAll(mousedown.target)
+        let target = buildLocators(mousedown.target)
         // setTimeout(function() {
         //     if (!self.clickLocator)
         //         handleRecord("click", target, '');
@@ -523,9 +531,9 @@ Recorder.addEventHandler(
       event.button == 0 &&
       dragstartLocator.target !== event.target
     ) {
-      var sourceLocators = locatorBuilders.buildAll(dragstartLocator.target);
+      var sourceLocators = buildLocators(dragstartLocator.target);
       var displayName = locatorBuilders.displayName;
-      var targetLocators = locatorBuilders.buildAll(event.target);
+      var targetLocators = buildLocators(event.target);
       locatorBuilders.displayName = displayName + ' and drop on ' + locatorBuilders.displayName;
       locatorBuilders.additionalData = targetLocators;
       handleRecord(
@@ -575,7 +583,7 @@ let nowNode = 0,
       let clickable = findClickableElement(event.target)
       if (clickable) {
         nodeInsertedLocator = event.target
-        nodeInsertedAttrChange = locatorBuilders.buildAll(event.target)
+        nodeInsertedAttrChange = buildLocators(event.target)
         setTimeout(() => {
           nodeInsertedLocator = undefined
           nodeInsertedAttrChange = undefined
@@ -600,7 +608,7 @@ let mouseoutLocator = undefined
   'mouseout',
   function(event) {
     if (mouseoutLocator !== null && event.target === mouseoutLocator) {
-      handleRecord('mouseOut', locatorBuilders.buildAll(event.target), '')
+      handleRecord('mouseOut', buildLocators(event.target), '')
     }
     mouseoutLocator = undefined
   },
@@ -700,18 +708,18 @@ Recorder.addEventHandler(
     let tmpTitle = goog.string.normalizeSpaces(event.target.ownerDocument.title)
     myPort.onMessage.addListener(function(m) {
       if (m.cmd.includes('Text')) {
-        handleRecord(m.cmd, locatorBuilders.buildAll(event.target), tmpVal)
+        handleRecord(m.cmd, buildLocators(event.target), tmpVal)
       } else if (m.cmd.includes('Title')) {
         handleRecord(m.cmd, [[tmpTitle]], '')
       } else if (m.cmd.includes('Value')) {
-        handleRecord(m.cmd, locatorBuilders.buildAll(event.target), event.target.value)
+        handleRecord(m.cmd, buildLocators(event.target), event.target.value)
       } else if (m.cmd === 'addStep') {
         handleRecord('addStep', [['']], '')
       } else if (customContextMenuItems.indexOf(m.cmd) > -1) {
-        handleRecord(m.cmd, locatorBuilders.buildAll(event.target, ignoreInnerTextDisplayNameForCommands.indexOf(m.cmd) > -1), '')
+        handleRecord(m.cmd, buildLocators(event.target, ignoreInnerTextDisplayNameForCommands.indexOf(m.cmd) > -1), '')
       }else if (m.cmd == 'readDataFromUI') {
         let value = event.target.value ? event.target.value : tmpVal;
-        handleRecord(m.cmd, locatorBuilders.buildAll(event.target, ignoreInnerTextDisplayNameForCommands.indexOf(m.cmd) > -1), value)
+        handleRecord(m.cmd, buildLocators(event.target, ignoreInnerTextDisplayNameForCommands.indexOf(m.cmd) > -1), value)
       } else if (m.cmd == 'reactTableRowData') {
         handleRecord(m.cmd, locatorBuilders.buildReactTableRowData(event.target), '');
       }
@@ -751,7 +759,7 @@ Recorder.addEventHandler(
         if (getEle.innerHTML != contentTest) {
           handleRecord(
             'editContent',
-            locatorBuilders.buildAll(event.target),
+            buildLocators(event.target),
             getEle.innerHTML
           )
         }
@@ -855,7 +863,7 @@ Recorder.addEventHandler('select', 'change', function(event) {
         let option = event.target.options[event.target.selectedIndex]
         handleRecord(
           'select',
-          locatorBuilders.buildAll(event.target),
+          buildLocators(event.target),
           getOptionLocator(option)
         )
       } else {
@@ -866,13 +874,13 @@ Recorder.addEventHandler('select', 'change', function(event) {
             if (options[i].selected) {
               handleRecord(
                 'addSelection',
-                locatorBuilders.buildAll(event.target),
+                buildLocators(event.target),
                 value
               )
             } else {
               handleRecord(
                 'removeSelection',
-                locatorBuilders.buildAll(event.target),
+                buildLocators(event.target),
                 value
               )
             }
