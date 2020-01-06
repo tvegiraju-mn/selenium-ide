@@ -534,13 +534,13 @@ export default class BackgroundRecorder {
                 recCommand.toggleOpensTableInput();
               }, 100)});*/
         var newTableData = [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType, columnType : columnType, columnName : columnName}]}]
+        var uniqColName = columnName && columnName.length > 2 ? columnName : undefined;
         if (reactTableRowData && reactTableRowData.length > 0) {
           newTableData[0].SelectRow[0]['ColumnIdentifier'] = JSON.parse(JSON.stringify(reactTableRowData));
-          var uniqColName = columnName;
           if (!uniqColName) {
             for (var idx in reactTableRowData) {
               var colIdData = reactTableRowData[idx]
-              if (colIdData.columnName != undefined && colIdData.columnName != '') {
+              if (colIdData.columnName != undefined && colIdData.columnName != '' && colIdData.columnName.length > 2) {
                 uniqColName = colIdData.columnName
                 break
               }

@@ -21,8 +21,8 @@ locatorBuilder_BOB.updateAppSpecificOrder = function () {
     LocatorBuilders.add('table', table);
     LocatorBuilders.add('id', id);
     //Below methods can be removed from BOB, as these won't be required in future
-    LocatorBuilders.add('xpath:idRelative', xpathIdRelative);
     LocatorBuilders.add('xpath:attributes', locatorBuilders.xpathAttr);
+    LocatorBuilders.add('xpath:idRelative', xpathIdRelative);
 };
 
 function isElementEligibleForRecordingCustom(e) {
@@ -42,12 +42,130 @@ function isElementFoundByLocatorNotMatchedEligibleForRecordingCustom(origEl, new
     return isElementMatchedWithBuiltLocator;
 }
 
+function buildTableExpectedData(e) {
+    var elementType = '', innerText = '';
+    var tableExpData = {};
+    var elIdAttr = e.getAttribute('id') ? e.getAttribute('id') : '';
+    var elClassAttr = e.getAttribute('class') ? e.getAttribute('class') : '';
+    var elTypeAttr = e.getAttribute('type') ? e.getAttribute('type').toLowerCase() : '';
+    //check if the action element is button or not
+    if (elClassAttr.includes('slds-button') || e.closest('[class*=slds-button]') || e.querySelectorAll('[class*=slds-button]')[0])
+        elementType = 'BUTTON';
+    else if (elClassAttr.includes('slds-checkbox') || e.querySelectorAll('[class*=slds-checkbox]')[0]) {
+        elementType = 'OTHER'
+        var checkBoxEl;
+        if (elTypeAttr == 'checkbox')
+            checkBoxEl = e
+        else if(elClassAttr == 'slds-checkbox')
+            checkBoxEl = e.querySelectorAll('input[type=checkbox]')[0]
+        else
+            checkBoxEl = e.closest('[class=slds-checkbox]').querySelectorAll('input[type=checkbox]')[0]
+        var isChecked = checkBoxEl.getAttribute('checked') || checkBoxEl.getAttribute('checked') == 'true'
+        innerText = isChecked ? 'on' : 'off';
+    } else {
+        var finalEl;
+        //check if target itself has -content
+        if (elIdAttr && elIdAttr.includes('-content'))
+            finalEl = e;
+        else {
+            //get parent having -content
+            finalEl = e.closest('[id*=-content]');
+            //get child having -content
+            if (!finalEl)
+                finalEl = e.querySelectorAll('[id*=-content]')[0]
+            if (!finalEl)
+                return undefined;
+        }
+        var nodeName = finalEl.nodeName.toLowerCase();
+        var eType = finalEl.getAttribute('type');
+        eType = eType ? eType.toLowerCase() : '';
+        if (finalEl.querySelectorAll('svg').length > 0 || finalEl.querySelectorAll('use').length > 0)
+            elementType = 'IMAGE'
+        else if (nodeName == 'a') {
+            elementType = 'LINK'
+            innerText = finalEl.textContent.trim()
+        } else if ((nodeName == 'input' && eType != 'hidden') || nodeName == 'select')
+            elementType = 'OTHER'
+        else {
+            elementType = 'PLAIN_TEXT'
+            innerText = finalEl.textContent.trim()
+        }
+    }
+    tableExpData.elementType = elementType
+    tableExpData.expectedValue = innerText
+    return tableExpData;
+}
+
+function handleVirtualizedTableRecording(e) {
+    //don't record for header rows
+    if (e.closest('div[class*=table-head-cell],div[class*=thead-row-selection]'))
+        return undefined;
+    var parentDivCellClass='slds-truncate', parentDivSelectionClass='tbody-row-selection';
+    //TODO: below attrname may change
+    //Find parent Column div
+    var parentDivCell = e.closest('div[class='+parentDivCellClass+'],div[class*='+parentDivSelectionClass+']');
+    if (!parentDivCell) {
+        var elClass = e.getAttribute('class');
+        elClass = elClass ? elClass.trim() : '';
+        if (elClass == parentDivCellClass || elClass.includes(parentDivSelectionClass))
+            parentDivCell = e;
+    }
+    if (!parentDivCell)
+        return undefined;
+    var parentDivClass = parentDivCell.getAttribute('class');
+    parentDivClass = parentDivClass ? parentDivClass.trim() : '';
+    var elementType = '', innerText = '', columnName = '', columnType = '', isValidEl=false;
+    if (parentDivClass.includes(parentDivSelectionClass)) {
+        elementType = 'OTHER'
+        columnType = 'CHECKBOX_INDEX'
+        var checkBoxEl = parentDivCell.querySelectorAll('input[type=checkbox]')
+        var isChecked = checkBoxEl[0].getAttribute('checked') || checkBoxEl[0].getAttribute('checked') == 'true'
+        innerText = isChecked ? 'on' : 'off';
+        isValidEl=true;
+    } else if (parentDivClass.includes(parentDivCellClass)) {
+        columnType = 'HEADER_NAME'
+        //TODO: below will change
+        var columnAttr = parentDivCell.getAttribute('id');
+        if (!columnAttr)
+            return undefined;
+        columnAttr = columnAttr.split('-')[2];
+
+        var parentTableDiv = parentDivCell.closest('div[class*=table-body]');
+        if (!parentTableDiv)
+            return undefined;
+        var headerParentDiv = parentTableDiv.querySelectorAll('div[id*=-' + columnAttr + ']')[0];
+        if (headerParentDiv) {
+            //TODO: below selector will change
+            columnName = headerParentDiv.querySelectorAll('[id*=-text][id*=-' + columnAttr + ']')[0].textContent.trim();
+            var tableExpData = buildTableExpectedData(e);
+            if (tableExpData) {
+                elementType = tableExpData.elementType;
+                innerText = tableExpData.expectedValue;
+                isValidEl=true;
+            }
+        }
+    }
+    if (isValidEl) {
+        var tableRowData = {};
+        tableRowData.elementType = elementType
+        tableRowData.columnType = columnType
+        tableRowData.expectedValue = innerText
+        tableRowData.columnName = columnName
+        console.log(JSON.stringify(tableRowData))
+        return tableRowData;
+    }
+    return undefined;
+}
+
 function buildReactTableRowData(e) {
     try {
+        var virtualizedTable = e.closest('div[class*=ReactVirtualized__Grid]');
+        if (virtualizedTable)
+            return handleVirtualizedTableRecording(e);
         //Table check
         var closestTable = e.closest('table[id*=-body]');
         var tableInModal = false;
-        if (closestTable == null || closestTable == undefined) {
+        if ((closestTable == null || closestTable == undefined) && e.closest('div[data-id=modalContent]')) {
             closestTable = e.closest('table[class*=slds-table_fixed-layout]');
             tableInModal = true;
         }
@@ -61,12 +179,14 @@ function buildReactTableRowData(e) {
         if (tableInModal) {
             var tdEl = e
             if (e.nodeName.toLowerCase() != 'td') {
-                tdEl = e.closest('td[role=gridcell]')
+                tdEl = e.closest('td')
             }
             var finalEl = tdEl.querySelectorAll('[id*=-content]')[0]
             if (finalEl == undefined || finalEl == null) {
-                finalEl = tdEl.querySelectorAll('button')
-                elementType = 'BUTTON'
+                if (tdEl.querySelectorAll('button')[0])
+                    elementType = 'BUTTON'
+                else if (tdEl.querySelectorAll('input[type=radio],input[type=checkbox]')[0])
+                    elementType = 'OTHER'
                 columnType = 'BLANK_INDEX'
             } else {
                 innerText = finalEl.textContent.trim()
@@ -85,7 +205,7 @@ function buildReactTableRowData(e) {
             if (e.nodeName.toLowerCase() == 'td' && (divEl == null || divEl == undefined))
                 divEl = e.querySelectorAll('div[class=slds-truncate]')[0]
             if (divEl == null || divEl == undefined) {
-                var tdEl = e.closest('td[role=gridcell]')
+                var tdEl = e.closest('td')
                 if (tdEl) {
                     var checkBoxEl = tdEl.querySelectorAll('input[type=checkbox]')
                     var buttonEl = tdEl.querySelectorAll('button')
@@ -107,6 +227,8 @@ function buildReactTableRowData(e) {
                     finalEl = finalEl[finalEl.length - 1]
                 }
                 var nodeName = finalEl.nodeName.toLowerCase();
+                var eType = finalEl.getAttribute('type');
+                eType = eType ? eType.toLowerCase() : '';
                 if (finalEl.querySelectorAll('button').length > 0)
                     elementType = 'BUTTON'
                 else if (finalEl.querySelectorAll('use').length > 0)
