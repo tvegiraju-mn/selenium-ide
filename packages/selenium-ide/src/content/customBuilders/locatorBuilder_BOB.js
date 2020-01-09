@@ -21,9 +21,39 @@ locatorBuilder_BOB.updateAppSpecificOrder = function () {
     LocatorBuilders.add('table', table);
     LocatorBuilders.add('id', id);
     //Below methods can be removed from BOB, as these won't be required in future
-    LocatorBuilders.add('xpath:idRelative', xpathIdRelative);
     LocatorBuilders.add('xpath:attributes', locatorBuilders.xpathAttr);
+    LocatorBuilders.add('xpath:idRelative', xpathIdRelative);
+    var origDisplayNameFn = locatorBuilders.getDisplayName;
+    locatorBuilders.getDisplayName = function(e, ignoreInnerText) {
+        console.log('custom React displayName');
+        var displayName = getCustomDisplayNameFn(e, ignoreInnerText);
+        if (!displayName) {
+            console.log('not found with React custom displayName. finding in base method')
+            displayName = origDisplayNameFn.apply(this, arguments);
+        }
+        return displayName;
+    };
 };
+
+function getCustomDisplayNameFn(e, ignoreInnerText) {
+    if (e.innerText && e.innerText.trim().length > 1 && ignoreInnerText != true)
+        return undefined;
+    //ignore if element is inside table
+    if (e.closest('div[class*=ReactVirtualized__Grid],table[id*=-body],table[class*=slds-table_fixed-layout]'))
+        return undefined;
+    //ignore if element is in dropdown menu
+    if (e.closest('div[class*=slds-dropdown_menu]'))
+        return undefined;
+    var currentNode = e;
+    while (currentNode != null) {
+        var elContainsTextInParentNode = window.document.evaluate('.//*[string-length(normalize-space(text()))>1]', currentNode,
+            null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null).iterateNext();
+        if (elContainsTextInParentNode != null && elContainsTextInParentNode != e)
+            return elContainsTextInParentNode.textContent.trim();
+        currentNode = currentNode.parentNode;
+    }
+    return undefined;
+}
 
 function isElementEligibleForRecordingCustom(e) {
     console.log('custom BOB isElementEligibleForRecording');

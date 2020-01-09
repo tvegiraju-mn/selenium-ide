@@ -151,15 +151,12 @@ Recorder.addEventHandler(
         if (tagName == 'select' || tagName == 'option') {
           var selOption = getOptionLocator(event.target.options[event.target.selectedIndex]);
           if (this.recordingState.lastSelectField == event.target && this.recordingState.lastSelectedOption == selOption) {
-            handleRecord('select', buildLocators(event.target), selOption);
             this.recordingState.lastSelectedOption = undefined;
             this.recordingState.lastSelectField = undefined;
-          } else if (!this.recordingState.lastSelectField && !this.recordingState.lastSelectedOption) {
+            handleRecord('select', buildLocators(event.target), selOption);
+          } else {
             this.recordingState.lastSelectedOption = selOption;
             this.recordingState.lastSelectField = event.target;
-          } else {
-            this.recordingState.lastSelectedOption = undefined;
-            this.recordingState.lastSelectField = undefined;
           }
           /*else if ( event.target.value != undefined && event.target.value != '' && (('input' == tagName && Recorder.inputTypes.indexOf(type) > -1) || tagName == 'textarea'))
            handleRecord('type', buildLocators(event.target), event.target.value);*/
@@ -167,6 +164,9 @@ Recorder.addEventHandler(
           this.recordingState.lastSelectedOption = undefined;
           this.recordingState.lastSelectField = undefined;
         }
+      } else {
+        this.recordingState.lastSelectedOption = undefined;
+        this.recordingState.lastSelectField = undefined;
       }
       if (!this.recordingState.preventClickTwice && shouldRecordClick) {
         if (tagName == 'input' && type == 'checkbox') {
@@ -175,6 +175,20 @@ Recorder.addEventHandler(
           handleRecord('checkbox', buildLocators(event.target), value);
         } else
           handleRecord('click', buildLocators(event.target), '')
+        /*To handle recording double click, add below code as part of above else condition.
+        {
+          if (event.detail == 1) {
+            this.recordingState.clickedElement = event.target;
+            var locators = buildLocators(event.target);
+            setTimeout(() => {
+              if (this.recordingState.clickedElement) {
+                console.log('timed out, recording as click');
+                handleRecord('click', locators, '');
+                this.recordingState.clickedElement = undefined;
+              }
+            }, 250);
+          }
+        }*/
         this.recordingState.preventClickTwice = true
       }
       setTimeout(() => {
@@ -191,6 +205,7 @@ Recorder.addEventHandler(
   'doubleClickAt',
   'dblclick',
   function(event) {
+    this.recordingState.clickedElement = undefined;
     handleRecord('doubleClick', buildLocators(event.target), '')
   },
   true
