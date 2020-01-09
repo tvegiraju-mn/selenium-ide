@@ -102,12 +102,12 @@ Recorder.prototype.attach = function() {
       const handlers = Recorder.eventHandlers[eventKey]
       this.eventListeners[eventKey] = []
       for (let i = 0; i < handlers.length; i++) {
+        this.eventListeners[eventKey].push(handlers[i].bind(this))
         this.window.document.addEventListener(
           eventName,
-          handlers[i].bind(this),
+            this.eventListeners[eventKey][i],
           capture
         )
-        this.eventListeners[eventKey].push(handlers[i])
       }
     }
     for (let observerName in Recorder.mutationObservers) {
