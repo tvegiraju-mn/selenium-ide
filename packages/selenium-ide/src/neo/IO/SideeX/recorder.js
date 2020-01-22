@@ -504,7 +504,7 @@ export default class BackgroundRecorder {
             return;
           }
           recCommand.setOtherData(response.data);
-          if (ignoreTableDetailsForActions.indexOf(message.command) > -1) {
+          if (ignoreTableDetailsForActions.indexOf(message.command) > -1 && message.recordedType == 'table') {
             var newTarget = message.target && message.target[1] ? message.target[1][0] : message.target[0][0];
             recCommand.setTarget(newTarget);
           }
