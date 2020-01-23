@@ -8,6 +8,9 @@ const PREFERRED_ATTRIBUTES = [
     'name'
 ];
 
+const dataColumnAttr = 'data-column-attr';
+const contentElSelector = '[id$=-content]';
+
 export default function locatorBuilder_BOB() {
 
 }
@@ -72,38 +75,223 @@ function isElementFoundByLocatorNotMatchedEligibleForRecordingCustom(origEl, new
     return isElementMatchedWithBuiltLocator;
 }
 
+function buildTableExpectedData(e, isVirtualizedTable) {
+    var elementType = '', innerText = '';
+    var tableExpData = {};
+    var elIdAttr = e.getAttribute('id') ? e.getAttribute('id') : '';
+    var elClassAttr = e.getAttribute('class') ? e.getAttribute('class') : '';
+    var elTypeAttr = e.getAttribute('type') ? e.getAttribute('type').toLowerCase() : '';
+    //check if the action element is button or not
+    var parButtonEl = e.closest('[class*=slds-button]')
+    var childButtonEl = e.querySelectorAll('[class*=slds-button]')[0]
+    if (elClassAttr.includes('slds-button') || parButtonEl || childButtonEl) {
+        elementType = 'BUTTON';
+        var buttonEl = elClassAttr.includes('slds-button') ? e : (parButtonEl ? parButtonEl : (childButtonEl ? childButtonEl : undefined))
+        if (buttonEl)
+            innerText = buttonEl.textContent ? buttonEl.textContent.trim() : ''
+    } else if (elClassAttr.includes('slds-checkbox') || e.querySelectorAll('[class*=slds-checkbox]')[0]) {
+        elementType = 'OTHER'
+        var checkBoxEl;
+        if (elTypeAttr == 'checkbox')
+            checkBoxEl = e
+        else if(elClassAttr == 'slds-checkbox')
+            checkBoxEl = e.querySelectorAll('input[type=checkbox]')[0]
+        else
+            checkBoxEl = e.closest('[class=slds-checkbox]').querySelectorAll('input[type=checkbox]')[0]
+        var isChecked = checkBoxEl.getAttribute('checked') || checkBoxEl.getAttribute('checked') == 'true'
+        innerText = isChecked ? 'on' : 'off';
+    } else {
+        var finalEl;
+        //check if target itself has -content
+        if (elIdAttr && elIdAttr.includes('-content'))
+            finalEl = e;
+        else {
+            //get parent having -content
+            finalEl = e.closest(contentElSelector);
+            //get child having -content
+            if (!finalEl)
+                finalEl = e.querySelectorAll(contentElSelector)[0]
+            if (!finalEl)
+                return;
+        }
+        var nodeName = finalEl.nodeName.toLowerCase();
+        var eType = finalEl.getAttribute('type');
+        eType = eType ? eType.toLowerCase() : '';
+        if (finalEl.querySelectorAll('svg').length > 0 || finalEl.querySelectorAll('use').length > 0)
+            elementType = 'IMAGE'
+        else if (nodeName == 'a') {
+            elementType = 'LINK'
+            innerText = finalEl.textContent.trim()
+        } else if ((nodeName == 'input' && eType != 'hidden') || nodeName == 'select')
+            elementType = 'OTHER'
+        else {
+            elementType = 'PLAIN_TEXT'
+            innerText = finalEl.textContent.trim()
+        }
+    }
+    tableExpData.elementType = elementType
+    tableExpData.expectedValue = innerText
+    return tableExpData;
+}
+
+function handleVirtualizedTableRecording(e) {
+    if (!e.closest('table[class*=slds-table_fixed-layout],div[class*=ReactVirtualized__Grid]'))
+        return undefined;
+    //don't record for header rows
+    if (e.closest('th,div[class*=table-head-cell],div[class*=thead-row-selection]')) {
+        console.log('action on header, skipping table')
+        return;
+    }
+    var isVirtualizedTable = e.closest('div[class*=ReactVirtualized__Grid]') ? true : false;
+    var parentDivCellClass='slds-truncate', parentDivSelectionClass='tbody-row-selection', nonVirtTableSearchChooser = 'table-search-chooser';
+    var parentDivChoserSelector = 'div[class='+parentDivCellClass+'],div[class*='+parentDivSelectionClass+'],[id*=\''+nonVirtTableSearchChooser+'\']';
+    //Find parent Column div
+    var parentDivCell = e.closest(parentDivChoserSelector);
+    if (!parentDivCell) {
+        var elClass = e.getAttribute('class');
+        var elId = e.getAttribute('id') ? e.getAttribute('id') : '';
+        elClass = elClass ? elClass.trim() : '';
+        //event itself is parent DIV
+        if (elClass == parentDivCellClass || elClass.includes(parentDivSelectionClass))
+            parentDivCell = e;
+        //if not, find child inside cell parent
+        if (!parentDivCell)
+            parentDivCell = e.querySelectorAll(parentDivChoserSelector)[0];
+    }
+    var isModalNonSelectionColumn = false
+    //Handle chooser mdal
+    if (!parentDivCell && e.closest('div[data-id=modalContent]')) {
+        isModalNonSelectionColumn = true;
+        var tdCell = e.tagName.toLowerCase() == 'td' ? e : e.closest('td')
+        console.log(tdCell)
+        if (tdCell.children.length == 1) {
+            parentDivCell = tdCell.children[0]
+        } else if (tdCell.children.length > 1) {
+            var dataAttrCurrCol = e.getAttribute(dataColumnAttr) ? e.getAttribute(dataColumnAttr) : '';
+            if (!dataAttrCurrCol) {
+                if (e.parentNode == tdCell)
+                    parentDivCell = e.querySelectorAll(contentElSelector)[0]
+                else {
+                    var elId = e.getAttribute('id') ? e.getAttribute('id') : '';
+                    if (elId.endsWith('-content'))
+                        parentDivCell = e;
+                    else {
+                        var parContentEl = e.closest(contentElSelector)
+                        var childContentEl = e.querySelectorAll(contentElSelector)[0]
+                        parentDivCell = parContentEl ? parContentEl : (childContentEl ? childContentEl : undefined)
+                    }
+                }
+
+            }
+        }
+    }
+    if (!parentDivCell) {
+        console.log('unable to find parent div cell')
+        return;
+    }
+    var parentDivClass = parentDivCell.getAttribute('class');
+    parentDivClass = parentDivClass ? parentDivClass.trim() : '';
+    var parentDivID = parentDivCell.getAttribute('id') ? parentDivCell.getAttribute('id') : '';
+    var elementType = '', innerText = '', columnName = '', columnType = '', isValidEl=false;
+    var parentTableDivClass = 'div[class*=table-body]';
+    if (!isVirtualizedTable)
+        parentTableDivClass = 'table[class*=slds-table_fixed-layout]';
+    var parentTableDiv = parentDivCell.closest(parentTableDivClass);
+    if (!parentTableDiv) {
+        console.log('unable to find table parent Div')
+        return;
+    }
+    //if first column, most of the cases header is checkbox and element will be checkbox in virtualized table
+    if (parentDivClass.includes(parentDivSelectionClass) || (!isVirtualizedTable && parentDivID.includes(nonVirtTableSearchChooser))) {
+        var headerFirstColumnSelector = 'th,div[class*=thead-row-selection]'
+        var headerFirstColumnEl = parentTableDiv.querySelectorAll(headerFirstColumnSelector)[0];
+        if (headerFirstColumnEl.querySelectorAll('input[type=checkbox]')[0])
+            columnType = 'CHECKBOX_INDEX'
+        else if (headerFirstColumnEl.querySelectorAll('input[type=radio]')[0])
+            columnType = 'RADIO_INDEX'
+        else
+            columnType = 'BLANK_INDEX'
+        var checkBoxEl = parentDivCell.querySelectorAll('input[type=checkbox]')[0]
+        var radioEl = parentDivCell.querySelectorAll('input[type=radio]')[0]
+        var buttonEl = parentDivCell.tagName.toLowerCase() == 'button' ? parentDivCell : parentDivCell.closest('button') || parentDivCell.querySelectorAll('button')[0]
+        if (checkBoxEl || radioEl) {
+            elementType = 'OTHER'
+            if (checkBoxEl) {
+                var isChecked = checkBoxEl.getAttribute('checked') || checkBoxEl.getAttribute('checked') == 'true'
+                innerText = isChecked ? 'on' : 'off';
+            }
+            isValidEl=true;
+        } else if (buttonEl) {
+            elementType = 'BUTTON'
+            isValidEl=true;
+        }
+    } else if (parentDivClass.includes(parentDivCellClass) || isModalNonSelectionColumn) {
+        //if other column
+        columnType = 'HEADER_NAME'
+        var columnAttr = parentDivCell.getAttribute(dataColumnAttr);
+        if (!columnAttr) {
+            console.log('data column attr is not defined')
+            return;
+        }
+        columnAttr = columnAttr.trim();
+        var headerParentDiv = parentTableDiv.querySelectorAll('['+dataColumnAttr+'=\'' + columnAttr + '\'][id$=-text]:not([class*=slds-assistive-text])')[0];
+        if (headerParentDiv) {
+            columnName = headerParentDiv.textContent.trim();
+            var tableExpData = buildTableExpectedData(e, isVirtualizedTable);
+            if (tableExpData) {
+                elementType = tableExpData.elementType;
+                innerText = tableExpData.expectedValue;
+                isValidEl=true;
+            }
+        } else
+            console.log('header text element not found')
+    }
+    console.log('after processing:'+isValidEl)
+    if (isValidEl) {
+        var tableRowData = {};
+        tableRowData.elementType = elementType
+        tableRowData.columnType = columnType
+        tableRowData.expectedValue = innerText
+        tableRowData.columnName = columnName
+        console.log(JSON.stringify(tableRowData))
+        return tableRowData;
+    }
+}
+
 function buildReactTableRowData(e) {
     try {
+        /*var virtualizedTable = e.closest('div[class*=ReactVirtualized__Grid]');
+        if (virtualizedTable)*/
+            return handleVirtualizedTableRecording(e);
         //Table check
-        var closestTable = e.closest('table[id*=-body]');
+        /*var closestTable = e.closest('table[class*=slds-table_fixed-layout]');
+        if (!closestTable)
+            return undefined;
         var tableInModal = false;
-        if (closestTable == null || closestTable == undefined) {
-            closestTable = e.closest('table[class*=slds-table_fixed-layout]');
+        if (e.closest('div[data-id=modalContent]'))
             tableInModal = true;
-        }
-        if (closestTable == null || closestTable == undefined)
-            return undefined;
-        var tableClass = closestTable.getAttribute('class')
-        if (tableClass == null || tableClass == undefined || (tableClass != undefined && !tableClass.toLowerCase().includes('slds-table')))
-            return undefined;
+        console.log('inside non virtual table, tableInModal:'+tableInModal)
         var tableRowData = {};
         var elementType = '', innerText = '', columnName = '', columnType = ''
         if (tableInModal) {
             var tdEl = e
-            if (e.nodeName.toLowerCase() != 'td') {
-                tdEl = e.closest('td[role=gridcell]')
-            }
-            var finalEl = tdEl.querySelectorAll('[id*=-content]')[0]
+            if (e.nodeName.toLowerCase() != 'td')
+                tdEl = e.closest('td')
+            var finalEl = tdEl.querySelectorAll(contentElSelector)[0]
             if (finalEl == undefined || finalEl == null) {
-                finalEl = tdEl.querySelectorAll('button')
-                elementType = 'BUTTON'
+                console.log('inside modal, selection row')
+                if (tdEl.querySelectorAll('button')[0])
+                    elementType = 'BUTTON'
+                else if (tdEl.querySelectorAll('input[type=radio],input[type=checkbox]')[0])
+                    elementType = 'OTHER'
                 columnType = 'BLANK_INDEX'
             } else {
+                console.log('inside modal, non selection row')
                 innerText = finalEl.textContent.trim()
                 var tdIdx = Array.prototype.slice.call(tdEl.parentNode.children).indexOf(tdEl)
                 var theadRow = closestTable.querySelectorAll('thead')[0].children[0]
                 var reqTableHead = theadRow.children[tdIdx]
-                columnName = reqTableHead.querySelectorAll('span[id*=-text][class*=slds-truncate]')[0].textContent.trim()
+                columnName = reqTableHead.querySelectorAll('[id$=-text][class*=slds-truncate]')[0].textContent.trim()
                 elementType = 'PLAIN_TEXT'
                 columnType = 'HEADER_NAME'
             }
@@ -112,11 +300,12 @@ function buildReactTableRowData(e) {
             if (e.nodeName.toLowerCase() == 'td' && e.children.length != 1)
                 return undefined;
             var divEl = e.closest('div[class=slds-truncate]')
-            if (e.nodeName.toLowerCase() == 'td' && (divEl == null || divEl == undefined))
+            if (e.nodeName.toLowerCase() == 'td' && !divEl)
                 divEl = e.querySelectorAll('div[class=slds-truncate]')[0]
-            if (divEl == null || divEl == undefined) {
-                var tdEl = e.closest('td[role=gridcell]')
+            if (!divEl) {
+                var tdEl = e.closest('td')
                 if (tdEl) {
+                    console.log('inside non modal, selection row')
                     var checkBoxEl = tdEl.querySelectorAll('input[type=checkbox]')
                     var buttonEl = tdEl.querySelectorAll('button')
                     if (checkBoxEl && checkBoxEl[0]) {
@@ -127,16 +316,22 @@ function buildReactTableRowData(e) {
                     }
                 }
             } else {
+                console.log('inside non modal, non selection row')
                 columnType = 'HEADER_NAME'
                 var tdEl = divEl.parentNode;
                 var tdIdx = Array.prototype.slice.call(tdEl.parentNode.children).indexOf(tdEl)
                 var divIdx = Array.prototype.slice.call(divEl.parentNode.children).indexOf(divEl)
-                var finalEl = divEl.querySelectorAll('[id*=-content]')[0];
-                if (!finalEl || finalEl == null) {
+                var finalEl = divEl.querySelectorAll(contentElSelector)[0];
+                if (!finalEl) {
                     finalEl = divEl.querySelectorAll('div');
-                    finalEl = finalEl[finalEl.length - 1]
+                    finalEl = finalEl.length > 0 ? finalEl[finalEl.length - 1] : undefined;
                 }
+                if (!finalEl)
+                    return;
+                console.log('found final el')
                 var nodeName = finalEl.nodeName.toLowerCase();
+                var eType = finalEl.getAttribute('type');
+                eType = eType ? eType.toLowerCase() : '';
                 if (finalEl.querySelectorAll('button').length > 0)
                     elementType = 'BUTTON'
                 else if (finalEl.querySelectorAll('use').length > 0)
@@ -152,8 +347,8 @@ function buildReactTableRowData(e) {
                 }
                 var theadRow = closestTable.querySelectorAll('thead[class=data_table_head]')[0].children[0]
                 var reqTableHead = theadRow.children[tdIdx]
-                var reqDiv = reqTableHead.querySelectorAll('div[id*=-body]')[divIdx]
-                columnName = reqDiv.querySelectorAll('[class=slds-truncate]')[0].textContent.trim()
+                var reqDiv = reqTableHead.querySelectorAll('div[id$=-content]')[divIdx]
+                columnName = reqDiv.querySelectorAll('[id$=-text]')[0].textContent.trim()
             }
         }
         tableRowData.elementType = elementType
@@ -161,7 +356,7 @@ function buildReactTableRowData(e) {
         tableRowData.expectedValue = innerText
         tableRowData.columnName = columnName
         console.log(JSON.stringify(tableRowData))
-        return tableRowData;
+        return tableRowData;*/
     } catch(e) {
         console.error(e)
     }
