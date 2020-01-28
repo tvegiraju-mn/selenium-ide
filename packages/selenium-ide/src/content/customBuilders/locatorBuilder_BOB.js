@@ -143,8 +143,10 @@ function handleVirtualizedTableRecording(e) {
         return;
     }
     var isVirtualizedTable = e.closest('div[class*=ReactVirtualized__Grid]') ? true : false;
-    var parentDivCellClass='slds-truncate', parentDivSelectionClass='tbody-row-selection', nonVirtTableSearchChooser = 'table-search-chooser';
-    var parentDivChoserSelector = 'div[class='+parentDivCellClass+'],div[class*='+parentDivSelectionClass+'],[id*=\''+nonVirtTableSearchChooser+'\']';
+    var parentDivCellClass='slds-truncate', parentDivSelectionClass='tbody-row-selection';
+    var nonVirtTableSearchChooser = 'table-search-chooser', nonVirtTableResultChooser = 'table-result-chooser';
+    var parentDivChoserSelector = 'div[class='+parentDivCellClass+'],div[class*='+parentDivSelectionClass+'],' +
+        '[id*=\''+nonVirtTableSearchChooser+'\'],[id*=\''+nonVirtTableResultChooser+'\']';
     //Find parent Column div
     var parentDivCell = e.closest(parentDivChoserSelector);
     if (!parentDivCell) {
@@ -159,7 +161,7 @@ function handleVirtualizedTableRecording(e) {
             parentDivCell = e.querySelectorAll(parentDivChoserSelector)[0];
     }
     var isModalNonSelectionColumn = false
-    //Handle chooser mdal
+    //Handle chooser modal
     if (!parentDivCell && e.closest('div[data-id=modalContent]')) {
         isModalNonSelectionColumn = true;
         var tdCell = e.tagName.toLowerCase() == 'td' ? e : e.closest('td')
@@ -202,7 +204,8 @@ function handleVirtualizedTableRecording(e) {
         return;
     }
     //if first column, most of the cases header is checkbox and element will be checkbox in virtualized table
-    if (parentDivClass.includes(parentDivSelectionClass) || (!isVirtualizedTable && parentDivID.includes(nonVirtTableSearchChooser))) {
+    if (parentDivClass.includes(parentDivSelectionClass)
+        || (!isVirtualizedTable && (parentDivID.includes(nonVirtTableSearchChooser)||parentDivID.includes(nonVirtTableResultChooser)))) {
         var headerFirstColumnSelector = 'th,div[class*=thead-row-selection]'
         var headerFirstColumnEl = parentTableDiv.querySelectorAll(headerFirstColumnSelector)[0];
         if (headerFirstColumnEl.querySelectorAll('input[type=checkbox]')[0])
