@@ -75,7 +75,7 @@ function isElementFoundByLocatorNotMatchedEligibleForRecordingCustom(origEl, new
     return isElementMatchedWithBuiltLocator;
 }
 
-function buildTableExpectedData(e, isVirtualizedTable) {
+function buildTableExpectedData(e, columnAttr, parentDivCell) {
     var elementType = '', innerText = '';
     var tableExpData = {};
     var elIdAttr = e.getAttribute('id') ? e.getAttribute('id') : '';
@@ -84,6 +84,8 @@ function buildTableExpectedData(e, isVirtualizedTable) {
     //check if the action element is button or not
     var parButtonEl = e.closest('[class*=slds-button]')
     var childButtonEl = e.querySelectorAll('[class*=slds-button]')[0]
+    var inlineEditDivEl = parentDivCell.querySelectorAll('[class*=slds-cell-edit]')[0]
+    var inlineLockDivEl = parentDivCell.querySelectorAll('[class*=slds-cell-lock]')[0]
     if (elClassAttr.includes('slds-button') || parButtonEl || childButtonEl) {
         elementType = 'BUTTON';
         var buttonEl = elClassAttr.includes('slds-button') ? e : (parButtonEl ? parButtonEl : (childButtonEl ? childButtonEl : undefined))
@@ -100,19 +102,51 @@ function buildTableExpectedData(e, isVirtualizedTable) {
             checkBoxEl = e.closest('[class=slds-checkbox]').querySelectorAll('input[type=checkbox]')[0]
         var isChecked = checkBoxEl.getAttribute('checked') || checkBoxEl.getAttribute('checked') == 'true'
         innerText = isChecked ? 'on' : 'off';
+    } else if (e.closest('svg')||e.querySelectorAll('svg')[0]||e.closest('use')||e.querySelectorAll('use')[0]) {
+        elementType = 'IMAGE'
     } else {
+        var dataAttrSelector = '['+dataColumnAttr+'=\'' + columnAttr + '\']';
         var finalEl;
         //check if target itself has -content
         if (elIdAttr && elIdAttr.includes('-content'))
             finalEl = e;
         else {
             //get parent having -content
-            finalEl = e.closest(contentElSelector);
+            finalEl = e.closest(contentElSelector + dataAttrSelector);
             //get child having -content
             if (!finalEl)
-                finalEl = e.querySelectorAll(contentElSelector)[0]
-            if (!finalEl)
+                finalEl = e.querySelectorAll(contentElSelector + dataAttrSelector)[0]
+            //ECB validation button/research pad button
+            if (!finalEl && e.tagName.toLowerCase() == 'div' && e.getAttribute('role') == 'button' && e.getAttribute(dataColumnAttr) == columnAttr) {
+                tableExpData.elementType = 'BUTTON'
+                tableExpData.expectedValue = e.textContent.trim();
+                tableExpData.elementIndex = e.parentNode.children.length == 1 ? '1' : '2';
+                return tableExpData;
+            }
+            if (!finalEl) {
+                //inline edit in ECB
+                var inlineEditSPANEl = parentDivCell.querySelectorAll('span' + dataAttrSelector)[0];
+                //inline edit in Formulary
+                var inlineEditPEl = parentDivCell.querySelectorAll('p' + dataAttrSelector)[0];
+                //approval table, getting last div with that class
+                var appRouteDataEl = parentDivCell.querySelectorAll('div:last-child[class*=slds-truncate]' + dataAttrSelector)[0];
+                if ((inlineLockDivEl||inlineEditDivEl) && e.getAttribute('role') != 'button' && inlineEditSPANEl) {
+                    console.log('handle ECB inline edit text field without id')
+                    finalEl = inlineEditSPANEl
+                } else if (inlineEditPEl) {
+                    //This might change for other inline edits without -content id
+                    console.log('handle other inline edits')
+                    finalEl = inlineEditPEl
+                } else if (appRouteDataEl) {
+                    console.log('handle approval route')
+                    finalEl = appRouteDataEl
+                } else
+                    console.log('not found from any of the custom handling')
+            }
+            if (!finalEl) {
+                console.log('not able to find final element')
                 return;
+            }
         }
         var nodeName = finalEl.nodeName.toLowerCase();
         var eType = finalEl.getAttribute('type');
@@ -138,43 +172,55 @@ function handleVirtualizedTableRecording(e) {
     if (!e.closest('table[class*=slds-table_fixed-layout],div[class*=ReactVirtualized__Grid]'))
         return undefined;
     //don't record for header rows
-    if (e.closest('th,div[class*=table-head-cell],div[class*=thead-row-selection]')) {
+    if (e.closest('th,div[class*=table-head-cell],div[class*=thead-row-selection],div[class*=slds-text-title_caps]')) {
         console.log('action on header, skipping table')
         return;
     }
     var isVirtualizedTable = e.closest('div[class*=ReactVirtualized__Grid]') ? true : false;
+    var elClass = e.getAttribute('class') ? e.getAttribute('class') : '';
+    var elId = e.getAttribute('id') ? e.getAttribute('id') : '';
+    var isInsideModal = e.closest('div[data-id=modalContent]');
     var parentDivCellClass='slds-truncate', parentDivSelectionClass='tbody-row-selection';
     var nonVirtTableSearchChooser = 'table-search-chooser', nonVirtTableResultChooser = 'table-result-chooser';
-    var parentDivChoserSelector = 'div[class='+parentDivCellClass+'],div[class*='+parentDivSelectionClass+'],' +
+    var parentDivChoserSelector = 'div[class='+parentDivCellClass+'][id*=\'-\'],div[class*='+parentDivSelectionClass+'],' +
         '[id*=\''+nonVirtTableSearchChooser+'\'],[id*=\''+nonVirtTableResultChooser+'\']';
     //Find parent Column div
     var parentDivCell = e.closest(parentDivChoserSelector);
     if (!parentDivCell) {
-        var elClass = e.getAttribute('class');
-        var elId = e.getAttribute('id') ? e.getAttribute('id') : '';
-        elClass = elClass ? elClass.trim() : '';
         //event itself is parent DIV
-        if (elClass == parentDivCellClass || elClass.includes(parentDivSelectionClass))
+        if ((elClass == parentDivCellClass && elId.includes('-')) || elClass.includes(parentDivSelectionClass))
             parentDivCell = e;
         //if not, find child inside cell parent
         if (!parentDivCell)
             parentDivCell = e.querySelectorAll(parentDivChoserSelector)[0];
     }
+    var isECBRowSelectionCell = false;
+    if (!parentDivCell && !isInsideModal) {
+        console.log('inside ECB parent div identifier')
+        var parentElCheckbox = e.closest('[class*=slds-checkbox]')
+        var parentContentNode = e.closest(contentElSelector)
+        var childContentNode = e.querySelectorAll(contentElSelector)[0]
+        var childElCheckbox = e.querySelectorAll('[class*=slds-checkbox]')[0]
+        if (elClass.includes('slds-checkbox') || parentElCheckbox|| childElCheckbox) {
+            parentDivCell = e.closest('[class=slds-form-element]')
+            isECBRowSelectionCell = true;
+        } else if (parentContentNode || childContentNode) {
+            parentDivCell = parentContentNode ? parentContentNode.parentNode : childContentNode.parentNode
+        }
+    }
     var isModalNonSelectionColumn = false
     //Handle chooser modal
-    if (!parentDivCell && e.closest('div[data-id=modalContent]')) {
+    if (!parentDivCell && isInsideModal) {
         isModalNonSelectionColumn = true;
         var tdCell = e.tagName.toLowerCase() == 'td' ? e : e.closest('td')
-        console.log(tdCell)
         if (tdCell.children.length == 1) {
             parentDivCell = tdCell.children[0]
         } else if (tdCell.children.length > 1) {
             var dataAttrCurrCol = e.getAttribute(dataColumnAttr) ? e.getAttribute(dataColumnAttr) : '';
             if (!dataAttrCurrCol) {
                 if (e.parentNode == tdCell)
-                    parentDivCell = e.querySelectorAll(contentElSelector)[0]
+                    parentDivCell = e.parentNode
                 else {
-                    var elId = e.getAttribute('id') ? e.getAttribute('id') : '';
                     if (elId.endsWith('-content'))
                         parentDivCell = e;
                     else {
@@ -183,9 +229,15 @@ function handleVirtualizedTableRecording(e) {
                         parentDivCell = parContentEl ? parContentEl : (childContentEl ? childContentEl : undefined)
                     }
                 }
-
+            } else {
+                parentDivCell = tdCell.querySelectorAll('[' + dataColumnAttr + '=\'' + dataAttrCurrCol + '\']')[0]
             }
         }
+    }
+    //Added for approval route tab table case, need to check this can be merged in above insideModal block
+    if (!parentDivCell && !isVirtualizedTable && !isInsideModal) {
+        parentDivCell = e.tagName.toLowerCase() == 'td' ? e : e.closest('td')
+        console.log('inside approval route case' + parentDivCell.tagName)
     }
     if (!parentDivCell) {
         console.log('unable to find parent div cell')
@@ -194,19 +246,29 @@ function handleVirtualizedTableRecording(e) {
     var parentDivClass = parentDivCell.getAttribute('class');
     parentDivClass = parentDivClass ? parentDivClass.trim() : '';
     var parentDivID = parentDivCell.getAttribute('id') ? parentDivCell.getAttribute('id') : '';
-    var elementType = '', innerText = '', columnName = '', columnType = '', isValidEl=false;
+    var elementType = '', innerText = '', columnName = '', columnType = '', elementIndex = '1', isValidEl=false;
     var parentTableDivClass = 'div[class*=table-body]';
     if (!isVirtualizedTable)
         parentTableDivClass = 'table[class*=slds-table_fixed-layout]';
     var parentTableDiv = parentDivCell.closest(parentTableDivClass);
+    if (isVirtualizedTable && !parentTableDiv) {
+        //Handle ECB Virtual parent Table
+        var reactGridElParent = parentDivCell.closest('[class=ReactVirtualized__Grid]').parentNode;
+        var parentGridElClass = reactGridElParent.getAttribute('class') ? reactGridElParent.getAttribute('class').trim() : '';
+        if (parentGridElClass.includes('BottomLeftGrid_ScrollWrapper') || parentGridElClass.includes('TopRightGrid_ScrollWrapper'))
+            reactGridElParent = reactGridElParent.parentNode;
+        parentTableDiv = reactGridElParent.parentNode;
+    }
     if (!parentTableDiv) {
         console.log('unable to find table parent Div')
         return;
     }
     //if first column, most of the cases header is checkbox and element will be checkbox in virtualized table
-    if (parentDivClass.includes(parentDivSelectionClass)
+    if (parentDivClass.includes(parentDivSelectionClass) || isECBRowSelectionCell
         || (!isVirtualizedTable && (parentDivID.includes(nonVirtTableSearchChooser)||parentDivID.includes(nonVirtTableResultChooser)))) {
         var headerFirstColumnSelector = 'th,div[class*=thead-row-selection]'
+        if (isECBRowSelectionCell)
+            headerFirstColumnSelector = 'div[class*=tableHeaderColumn]';
         var headerFirstColumnEl = parentTableDiv.querySelectorAll(headerFirstColumnSelector)[0];
         if (headerFirstColumnEl.querySelectorAll('input[type=checkbox]')[0])
             columnType = 'CHECKBOX_INDEX'
@@ -232,18 +294,23 @@ function handleVirtualizedTableRecording(e) {
         //if other column
         columnType = 'HEADER_NAME'
         var columnAttr = parentDivCell.getAttribute(dataColumnAttr);
+        if (!columnAttr && parentDivCell.getAttribute('data-id'))
+            columnAttr = parentDivCell.getAttribute('data-id').trim().replace('TableRowColumn-', '')
         if (!columnAttr) {
             console.log('data column attr is not defined')
             return;
         }
         columnAttr = columnAttr.trim();
-        var headerParentDiv = parentTableDiv.querySelectorAll('['+dataColumnAttr+'=\'' + columnAttr + '\'][id$=-text]:not([class*=slds-assistive-text])')[0];
+        var headerCellSelector = '['+dataColumnAttr+'=\'' + columnAttr + '\'][id$=-text]:not([class*=slds-assistive-text])' +
+            ',span['+dataColumnAttr+'=\'' + columnAttr + '\']:not([class*=slds-assistive-text])';
+        var headerParentDiv = parentTableDiv.querySelectorAll(headerCellSelector)[0];
         if (headerParentDiv) {
             columnName = headerParentDiv.textContent.trim();
-            var tableExpData = buildTableExpectedData(e, isVirtualizedTable);
+            var tableExpData = buildTableExpectedData(e, columnAttr, parentDivCell);
             if (tableExpData) {
                 elementType = tableExpData.elementType;
                 innerText = tableExpData.expectedValue;
+                elementIndex = tableExpData.elementIndex ? tableExpData.elementIndex : '1';
                 isValidEl=true;
             }
         } else
@@ -255,6 +322,7 @@ function handleVirtualizedTableRecording(e) {
         tableRowData.elementType = elementType
         tableRowData.columnType = columnType
         tableRowData.expectedValue = innerText
+        tableRowData.elementIndex = elementIndex
         tableRowData.columnName = columnName
         console.log(JSON.stringify(tableRowData))
         return tableRowData;
@@ -371,7 +439,7 @@ function table(e) {
     if (tableRowData) {
         if (!this.recordedType) {
             this.recordedType = 'table';
-            this.additionalData = 'rowType=data|elementType=' + tableRowData.elementType + '|columnName=' + tableRowData.columnName + '|columnType=' + tableRowData.columnType;
+            this.additionalData = 'rowType=data|elementType=' + tableRowData.elementType + '|columnName=' + tableRowData.columnName + '|columnType=' + tableRowData.columnType + '|elementIndex=' + tableRowData.elementIndex;
             this.displayName = undefined;
         }
         var id = (tableRowData.columnName && tableRowData.columnName != '' ? tableRowData.columnName : (tableRowData.columnType != '' ? tableRowData.columnType : undefined))
