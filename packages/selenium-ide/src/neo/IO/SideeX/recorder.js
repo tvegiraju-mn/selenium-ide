@@ -526,6 +526,7 @@ export default class BackgroundRecorder {
           columnName = attrValues[2].split('=')[1]
           columnType = attrValues[3].split('=')[1]
         }
+        var elementIndex = attrValues.length >= 5 ? attrValues[4].split('=')[1] : '1'
         /*browser.windows.update(this.windowSession.ideWindowId, { focused: true })
             .then(() => {setTimeout(() => {
                 recCommand.setHasTableInput(true);
@@ -533,7 +534,7 @@ export default class BackgroundRecorder {
                 ModalState.toggleTableInputConfig();
                 recCommand.toggleOpensTableInput();
               }, 100)});*/
-        var newTableData = [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType, columnType : columnType, columnName : columnName}]}]
+        var newTableData = [{SelectRow: [{rowType : rowType}], SelectColumn: [{elementType : elementType, columnType : columnType, columnName : columnName, elementIndex : elementIndex}]}]
         var uniqColName = columnName && columnName.length > 2 ? columnName : undefined;
         if (reactTableRowData && reactTableRowData.length > 0) {
           newTableData[0].SelectRow[0]['ColumnIdentifier'] = JSON.parse(JSON.stringify(reactTableRowData));
@@ -546,9 +547,9 @@ export default class BackgroundRecorder {
               }
             }
           }
-          newTableData[0].columnName = uniqColName;
           reactTableRowData = undefined;
         }
+        newTableData[0].columnName = uniqColName;
         /*if (tableData) {
           newTableData = JSON.parse(JSON.stringify(tableData))
           newTableData[0].SelectRow[0].rowType = rowType
