@@ -44,8 +44,8 @@ function getCustomDisplayNameFn(e, ignoreInnerText) {
     //ignore if element is inside table
     if (e.closest('div[class*=ReactVirtualized__Grid],table[id*=-body],table[class*=slds-table_fixed-layout]'))
         return undefined;
-    //ignore if element is in dropdown menu
-    if (e.closest('div[class*=slds-dropdown_menu]'))
+    //ignore if element is in dropdown menu/popover edits
+    if (e.closest('div[class*=slds-dropdown_menu],div[class*=slds-popover]'))
         return undefined;
     var currentNode = e;
     while (currentNode != null) {
@@ -201,20 +201,44 @@ function handleVirtualizedTableRecording(e) {
         var parentContentNode = e.closest(contentElSelector)
         var childContentNode = e.querySelectorAll(contentElSelector)[0]
         var childElCheckbox = e.querySelectorAll('[class*=slds-checkbox]')[0]
+        var inlineEditCellEl = e.closest('div[class*=slds-cell-edit],div[class*=slds-cell-lock]')
+        var gridCellEl = e.closest('div[role=gridcell][class*='+parentDivCellClass+']')
         if (elClass.includes('slds-checkbox') || parentElCheckbox|| childElCheckbox) {
             parentDivCell = e.closest('[class=slds-form-element]')
             isECBRowSelectionCell = true;
-        } else if (parentContentNode || childContentNode) {
+        } else if (parentContentNode || childContentNode)
             parentDivCell = parentContentNode ? parentContentNode.parentNode : childContentNode.parentNode
-        }
+        else if (inlineEditCellEl)
+            parentDivCell = inlineEditCellEl.parentNode;
+        else if (gridCellEl)
+            parentDivCell = gridCellEl
     }
     var isModalNonSelectionColumn = false
     //Handle chooser modal
     if (!parentDivCell && isInsideModal) {
+        console.log('inside modal parent div cell')
         isModalNonSelectionColumn = true;
         var tdCell = e.tagName.toLowerCase() == 'td' ? e : e.closest('td')
         if (tdCell.children.length == 1) {
-            parentDivCell = tdCell.children[0]
+            var checkboxEl = tdCell.querySelectorAll('input[type=checkbox]')[0]
+            var radioEl = tdCell.querySelectorAll('input[type=radio]')[0]
+            if (checkboxEl || radioEl) {
+                isModalNonSelectionColumn = false;
+                isECBRowSelectionCell = true;
+                parentDivCell = tdCell;
+            }
+            if (tdCell.children[0].getAttribute(dataColumnAttr))
+                parentDivCell = tdCell.children[0]
+            else {
+                var tdDataId = tdCell.getAttribute('data-id')
+                var tdChildHavingDataId = tdCell.querySelectorAll('[data-id^=\'TableRowColumn-\']')[0]
+                if (tdDataId && tdDataId.includes('TableRowColumn-'))
+                    parentDivCell = tdCell
+                else if (tdChildHavingDataId)
+                    parentDivCell = tdChildHavingDataId
+                else
+                    console.log('not having data-id / data column attr field')
+            }
         } else if (tdCell.children.length > 1) {
             var dataAttrCurrCol = e.getAttribute(dataColumnAttr) ? e.getAttribute(dataColumnAttr) : '';
             if (!dataAttrCurrCol) {
@@ -252,6 +276,7 @@ function handleVirtualizedTableRecording(e) {
         parentTableDivClass = 'table[class*=slds-table_fixed-layout]';
     var parentTableDiv = parentDivCell.closest(parentTableDivClass);
     if (isVirtualizedTable && !parentTableDiv) {
+        console.log('inside finding virtualized parent table div')
         //Handle ECB Virtual parent Table
         var reactGridElParent = parentDivCell.closest('[class=ReactVirtualized__Grid]').parentNode;
         var parentGridElClass = reactGridElParent.getAttribute('class') ? reactGridElParent.getAttribute('class').trim() : '';
@@ -263,17 +288,24 @@ function handleVirtualizedTableRecording(e) {
         console.log('unable to find table parent Div')
         return;
     }
+    console.log('parent div cell Class: ' + parentDivClass)
     //if first column, most of the cases header is checkbox and element will be checkbox in virtualized table
     if (parentDivClass.includes(parentDivSelectionClass) || isECBRowSelectionCell
         || (!isVirtualizedTable && (parentDivID.includes(nonVirtTableSearchChooser)||parentDivID.includes(nonVirtTableResultChooser)))) {
+        console.log('inside selection column')
         var headerFirstColumnSelector = 'th,div[class*=thead-row-selection]'
         if (isECBRowSelectionCell)
             headerFirstColumnSelector = 'div[class*=tableHeaderColumn]';
         var headerFirstColumnEl = parentTableDiv.querySelectorAll(headerFirstColumnSelector)[0];
+        var headerColumnNameEl = headerFirstColumnEl.querySelectorAll('[id$=-text]:not([class*=slds-assistive-text]),span:not([class*=slds-assistive-text])')[0]
         if (headerFirstColumnEl.querySelectorAll('input[type=checkbox]')[0])
             columnType = 'CHECKBOX_INDEX'
         else if (headerFirstColumnEl.querySelectorAll('input[type=radio]')[0])
             columnType = 'RADIO_INDEX'
+        else if (headerColumnNameEl && headerColumnNameEl.textContent) {
+            columnType = 'HEADER_NAME'
+            columnName = headerColumnNameEl.textContent.trim();
+        }
         else
             columnType = 'BLANK_INDEX'
         var checkBoxEl = parentDivCell.querySelectorAll('input[type=checkbox]')[0]
@@ -291,6 +323,7 @@ function handleVirtualizedTableRecording(e) {
             isValidEl=true;
         }
     } else if (parentDivClass.includes(parentDivCellClass) || isModalNonSelectionColumn) {
+        console.log('inside non selection column')
         //if other column
         columnType = 'HEADER_NAME'
         var columnAttr = parentDivCell.getAttribute(dataColumnAttr);
