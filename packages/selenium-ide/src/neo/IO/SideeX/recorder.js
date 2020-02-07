@@ -37,7 +37,7 @@ const actionCommentMap = {
   'jsclick' : 'Click on'
 }
 const actionsReqDetails = ['readElementAttribute', 'readElementStyle', 'performWait', 'ComparisonOfTwoValues'];
-var ignoreTableDetailsForActions = ['ComparisonOfTwoValues', 'performWait']
+var ignoreTableDetailsForActions = ['ComparisonOfTwoValues']
 var appType = undefined
 var reactTableRowData = undefined
 //var tableData = undefined
