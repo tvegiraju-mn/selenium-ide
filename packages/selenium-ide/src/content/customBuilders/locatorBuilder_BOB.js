@@ -176,6 +176,10 @@ function handleVirtualizedTableRecording(e) {
         console.log('action on header, skipping table')
         return;
     }
+    var tableEl = e.closest('table[class*=slds-table]')
+    //skip if closest table don't have header element
+    if (tableEl && !window.document.evaluate('./thead', tableEl, null, XPathResult.UNORDERED_NODE_ITERATOR_TYPE, null).iterateNext())
+        return;
     var isVirtualizedTable = e.closest('div[class*=ReactVirtualized__Grid]') ? true : false;
     var elClass = e.getAttribute('class') ? e.getAttribute('class') : '';
     var elId = e.getAttribute('id') ? e.getAttribute('id') : '';
