@@ -16,6 +16,7 @@ const PREFERRED_ATTRIBUTES = [
 
 const finderNamesToAddLocatorEvenIfElNotMatched = [
     'leftNav',
+    'xpath:comppath',
     'xpath:comppathRelative'
 ];
 
@@ -88,6 +89,8 @@ function getCustomDisplayNameFn(e) {
 }
 
 function table(e) {
+    if (e.closest('div[class*=labeledGroup]'))
+        return;
     var elXpath = getXpathOfAnElement(e, true);
     if (elXpath) {
         var parXpath = elXpath + '/ancestor::tr[contains(@class,\'tableRow bodyRow bodyRow-\') or contains(@class,\'tableRow headerRow headerRow-\') ' +
@@ -126,35 +129,59 @@ function table(e) {
 }
 
 function xpathComppath(e) {
+    var linkEl = (e.nodeName.toLowerCase() == 'a' && e.getAttribute('comppath').includes('spreadsheetContainer')) ? e : e.closest('a[comppath*=spreadsheetContainer]')
+    if (linkEl) {
+        e = linkEl;
+        console.log('handling opener inside spreadsheetContainer')
+    }
     var comppath = e.getAttribute('comppath');
+    var isCurrElHaveComppath = true;
+    if (!comppath) {
+        isCurrElHaveComppath = false;
+        comppath = e.parentNode.getAttribute('comppath')
+    }
     if (comppath) {
-        let locator = getXpathFromComppathAttr(e.nodeName, comppath);
+        var nodeName = isCurrElHaveComppath ? e.nodeName : e.parentNode.nodeName;
+        let locator = getXpathFromComppathAttr(nodeName, comppath) + (isCurrElHaveComppath ? '' : '/' + e.nodeName.toLowerCase());
         //If comppath matches exactly with element found then only return comppath
         if (this.isElementUniqueWithXPath(locator, e))
             return 'xpath=' + locator;
         else {
+            if (comppath.indexOf('spreadsheetContainer') > -1) {
+                let labelLoc = '//' + this.xpathHtmlElement(isCurrElHaveComppath?e.nodeName.toLowerCase():e.parentNode.nodeName.toLowerCase()) + '[@comppath=' + this.attributeValue(comppath) + ']' +
+                    '/ancestor::tr[contains(@class, \'tableRow bodyRow\')]/td[1]/span';
+                let labelEl = this.findElement(labelLoc);
+                var additionalData = undefined;
+                if (labelEl && labelEl.innerText) {
+                    var labelText = this.getInnerTextWithoutChildren(labelEl).replace(':','')
+                    additionalData = labelText
+                    let finalLoc = '//td[(normalize-space(.)=\'' + labelText + '\' or normalize-space(.)=\'' + labelText + ':\')]//following::' + locator.substring(2);
+                    if (comppath.indexOf('spreadsheetContainer.FormularyCondition') > -1) {
+                        let labelParLoc = labelLoc + '/ancestor::div[contains(@comppath,\'spreadsheetContainer.FormularyCondition\')]//div[contains(@class,\'title\')]';
+                        let labelParEl = this.findElement(labelParLoc);
+                        if (labelParEl && labelParEl.innerText) {
+                            var labelParText = this.getInnerTextWithoutChildren(labelParEl)
+                            additionalData = labelParText + '->' + additionalData
+                            finalLoc = '//div[(translate(normalize-space(.),\'abcdefghijklmnopqrstuvwxyz\',\'ABCDEFGHIJKLMNOPQRSTUVWXYZ\')=translate(\'' + labelParText + '\',\'abcdefghijklmnopqrstuvwxyz\',\'ABCDEFGHIJKLMNOPQRSTUVWXYZ\'))]' +
+                                '//following::' + finalLoc.substring(2);
+                        }
+                    }
+                    //this.logging('Final Locator: ' + finalLoc);
+                    if (e == this.findElement(finalLoc)) {
+                        if (additionalData) {
+                            this.recordedType = 'locatorHavingData';
+                            this.additionalData = 'innerText=' + additionalData;
+                            if (e.nodeName.toLowerCase() == 'a')
+                                this.displayName = labelText + ' chooser';
+                        }
+                        return 'xpath=' + finalLoc;
+                    }
+                }
+            }
             if (e.innerText) {
                 let textLoc = locator + '[contains(.,\'' + this.getInnerTextWithoutChildren(e) + '\')]';
                 if (this.isElementUniqueWithXPath(textLoc, e))
                     return 'xpath=' + textLoc;
-            }
-            if (comppath.indexOf('spreadsheetContainer') > -1) {
-                let labelLoc = '//' + this.xpathHtmlElement(e.nodeName.toLowerCase()) + '[@comppath=' + this.attributeValue(comppath) + ']' +
-                    '/ancestor::tr[contains(@class, \'tableRow bodyRow\')]/td[1]/span';
-                let labelEl = this.findElement(labelLoc);
-                if (labelEl && labelEl.innerText) {
-                    let finalLoc = '//td[(normalize-space(.)=\'' + this.getInnerTextWithoutChildren(labelEl) + '\')]//following::' + locator.substring(2);
-                    if (comppath.indexOf('spreadsheetContainer.FormularyCondition') > -1) {
-                        let labelParLoc = labelLoc + '/ancestor::div[contains(@comppath,\'spreadsheetContainer.FormularyCondition\')]//div[contains(@class,\'title\')]';
-                        let labelParEl = this.findElement(labelParLoc);
-                        if (labelParEl && labelParEl.innerText)
-                            finalLoc = '//div[(translate(normalize-space(.),\'ABCDEFGHIJKLMNOPQRSTUVWXYZ\',\'abcdefghijklmnopqrstuvwxyz\')=\'' + this.getInnerTextWithoutChildren(labelParEl).toLowerCase() + '\')]' +
-                                '//following::' + finalLoc.substring(2);
-                    }
-                    //this.logging('Final Locator: ' + finalLoc);
-                    if (e == this.findElement(finalLoc))
-                        return 'xpath=' + finalLoc;
-                }
             }
         }
     }
