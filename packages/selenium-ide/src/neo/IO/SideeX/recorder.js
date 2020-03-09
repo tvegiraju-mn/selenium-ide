@@ -576,12 +576,15 @@ export default class BackgroundRecorder {
         }
         self.stopRecording();
         this.updateDataFromWebAppInRecCommand(selectTableData, callbackFn, actionsReqDetails.indexOf(message.command) > -1);
-      } else if (message.recordedType == 'leftNav') {
+      } else if (message.recordedType == 'leftNav' || message.recordedType == 'locatorHavingData') {
         recCommand.setIsLeftNav('true');
         var attrValues = message.additionalData.split('=');
         var otherData = recCommand.otherData;
         if (!otherData) otherData = {};
-        otherData.navLinks = attrValues[1];
+        if (message.recordedType == 'leftNav')
+          otherData.navLinks = attrValues[1];
+        else
+          otherData.innerText = attrValues[1];
         recCommand.setOtherData(otherData) ;
       }
     }
